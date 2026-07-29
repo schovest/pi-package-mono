@@ -1,0 +1,32 @@
+{
+  "name": "pi-package-mono",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "check": "biome check --write --error-on-warnings . && tsc --noEmit -p tsconfig.base.json",
+    "check:files": "biome check --write --error-on-warnings",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "version:patch": "npm version patch -ws --no-git-tag-version && node scripts/sync-versions.js && rm -rf node_modules packages/*/node_modules package-lock.json && npm install",
+    "version:minor": "npm version minor -ws --no-git-tag-version && node scripts/sync-versions.js && rm -rf node_modules packages/*/node_modules package-lock.json && npm install",
+    "version:major": "npm version major -ws --no-git-tag-version && node scripts/sync-versions.js && rm -rf node_modules packages/*/node_modules package-lock.json && npm install",
+    "prepublishOnly": "npm run check",
+    "publish": "npm run prepublishOnly && npm publish -ws --access public",
+    "publish:dry": "npm run prepublishOnly && npm publish -ws --access public --dry-run"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/cross-spawn": "^6.0.6",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
