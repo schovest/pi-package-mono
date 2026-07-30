@@ -1,0 +1,42 @@
+{
+  "name": "@schovest/pi-tps",
+  "version": "0.1.0",
+  "description": "Tokens-per-second monitor extension for Pi coding agent",
+  "type": "module",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts",
+      "default": "./index.ts"
+    }
+  },
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "tps",
+    "tokens-per-second",
+    "coding-agent"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "files": [
+    "index.ts"
+  ],
+  "peerDependencies": {
+    "@schovest/pi-ai": "*",
+    "@schovest/pi-coding-agent": "*"
+  },
+  "peerDependenciesMeta": {
+    "@schovest/pi-ai": {
+      "optional": true
+    },
+    "@schovest/pi-coding-agent": {
+      "optional": true
+    }
+  }
+}
