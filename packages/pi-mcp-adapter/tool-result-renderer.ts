@@ -200,7 +200,7 @@ export function formatMcpToolResultLines(
 }
 
 /** Max characters for MCP tool result text output. Longer content is truncated with a note. */
-const MAX_RESULT_OUTPUT_CHARS = 3000;
+const MAX_RESULT_OUTPUT_CHARS = 1000;
 
 export function renderMcpToolResult(
   result: AgentToolResult<McpToolResultDetails>,
