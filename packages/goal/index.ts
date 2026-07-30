@@ -14,7 +14,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@schovest/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
 
 // ============================================================================

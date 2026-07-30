@@ -26,8 +26,8 @@
 import { spawn } from "node:child_process";
 import { randomFillSync, randomUUID } from "node:crypto";
 import { chmod, unlink, writeFile } from "node:fs/promises";
-import type { ExtensionAPI } from "@schovest/pi-coding-agent";
-import { type Component, type Focusable, matchesKey } from "@schovest/pi-tui";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { type Component, type Focusable, matchesKey } from "@earendil-works/pi-tui";
 
 /** 匹配命令中第一个 sudo（用于检测和单次替换） */
 const SUDO_PATTERN = /\bsudo(?=\s)/;

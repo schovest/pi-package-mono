@@ -34,14 +34,10 @@
     "@earendil-works/pi-coding-agent": "0.79.10"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@schovest/pi-coding-agent": "*"
+    "@earendil-works/pi-coding-agent": "*"
   },
   "peerDependenciesMeta": {
     "@earendil-works/pi-coding-agent": {
-      "optional": true
-    },
-    "@schovest/pi-coding-agent": {
       "optional": true
     }
   }
