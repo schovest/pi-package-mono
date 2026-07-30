@@ -1,0 +1,41 @@
+{
+  "name": "@schovest/pi-sudo-helper",
+  "version": "0.1.0",
+  "description": "Sudo password helper extension for Pi coding agent",
+  "type": "module",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "import": "./index.ts",
+      "default": "./index.ts"
+    }
+  },
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "sudo",
+    "coding-agent"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "files": [
+    "index.ts"
+  ],
+  "peerDependencies": {
+    "@schovest/pi-coding-agent": "*",
+    "@schovest/pi-tui": "*"
+  },
+  "peerDependenciesMeta": {
+    "@schovest/pi-coding-agent": {
+      "optional": true
+    },
+    "@schovest/pi-tui": {
+      "optional": true
+    }
+  }
+}
