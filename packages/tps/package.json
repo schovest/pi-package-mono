@@ -27,11 +27,23 @@
   "files": [
     "index.ts"
   ],
+  "devDependencies": {
+    "@earendil-works/pi-ai": "0.74.2",
+    "@earendil-works/pi-coding-agent": "0.79.10"
+  },
   "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
     "@schovest/pi-ai": "*",
     "@schovest/pi-coding-agent": "*"
   },
   "peerDependenciesMeta": {
+    "@earendil-works/pi-ai": {
+      "optional": true
+    },
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
     "@schovest/pi-ai": {
       "optional": true
     },

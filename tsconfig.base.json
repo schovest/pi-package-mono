@@ -13,6 +13,6 @@
 		"noEmit": true,
 		"types": ["node"]
 	},
-	"include": ["packages/*/**/*.ts", "test/**/*.ts", "vitest.config.ts"],
+	"include": ["packages/*/**/*.ts", "test/**/*.ts", "vitest.config.ts", "types/**/*.d.ts"],
 	"exclude": ["**/node_modules/**", "**/.pi/**", "**/dist/**"]
 }
