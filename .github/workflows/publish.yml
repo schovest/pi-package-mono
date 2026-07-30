@@ -10,7 +10,6 @@ permissions: {}
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: npm-publish
     permissions:
       contents: read
       id-token: write
@@ -31,6 +30,5 @@ jobs:
 
       - run: npm run test
 
-      - name: Publish
-        working-directory: packages/pi-mcp-adapter
-        run: npm publish --access public
+      - name: Publish all workspace packages
+        run: npm publish -ws --access public --provenance
