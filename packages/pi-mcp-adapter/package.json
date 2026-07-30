@@ -17,6 +17,9 @@
     }
   },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "Nico Bailon",
   "engines": {
     "node": ">=20"
