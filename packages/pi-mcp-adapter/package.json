@@ -1,6 +1,6 @@
 {
   "name": "@schovest/pi-mcp-adapter",
-  "version": "2.15.1",
+  "version": "0.1.0",
   "description": "MCP (Model Context Protocol) adapter extension for Pi coding agent",
   "type": "module",
   "types": "./index.ts",
