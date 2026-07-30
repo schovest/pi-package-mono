@@ -1,6 +1,6 @@
 {
   "name": "@schovest/pi-tps",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Tokens-per-second monitor extension for Pi coding agent",
   "type": "module",
   "types": "./index.ts",

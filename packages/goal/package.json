@@ -1,6 +1,6 @@
 {
   "name": "@schovest/pi-goal",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Goal orchestration extension for Pi coding agent",
   "type": "module",
   "types": "./index.ts",
