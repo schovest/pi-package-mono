@@ -1,0 +1,25 @@
+{
+  "name": "@schovest/pi-i18n",
+  "version": "0.1.2",
+  "description": "Pi extension. The localization foundation for rpiv-* skills: locale detection, the /languages command, the --locale flag, and a cross-package locale registry.",
+  "type": "module",
+  "types": "./i18n.ts",
+  "exports": {
+    ".": { "types": "./i18n.ts", "import": "./i18n.ts", "default": "./i18n.ts" },
+    "./loader": { "types": "./loader.ts", "import": "./loader.ts", "default": "./loader.ts" }
+  },
+  "license": "MIT",
+  "author": "juicesharp",
+  "keywords": ["pi-package", "pi-extension", "pi", "i18n", "localization"],
+  "files": ["index.ts", "i18n.ts", "i18n-ui.ts", "loader.ts", "README.md", "LICENSE"],
+  "pi": { "extensions": ["./index.ts"] },
+  "dependencies": { "@schovest/pi-config": "^0.1.2" },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": { "optional": true },
+    "@earendil-works/pi-tui": { "optional": true }
+  }
+}
