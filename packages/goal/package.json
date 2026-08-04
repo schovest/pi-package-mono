@@ -31,7 +31,7 @@
     "typebox": "^1.3.0"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "0.79.10"
+    "@earendil-works/pi-coding-agent": "0.80.5"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
