@@ -9,7 +9,7 @@
   </a>
 </div>
 
-Ask a side question without polluting the main conversation. `rpiv-btw` adds
+Ask a side question without polluting the main conversation. `pi-btw` adds
 `/btw <question>` to [Pi Agent](https://github.com/badlogic/pi-mono) — your same
 primary model answers in a panel at the bottom of the terminal, using a read-only
 clone of the current conversation as context. The answer never enters the
@@ -93,7 +93,7 @@ pick, but Pi needs an active model with working credentials (`/login`).
 ## Related
 
 - [`@schovest/pi-pi`](https://www.npmjs.com/package/@schovest/pi-pi) — the
-  umbrella package. It does not install `rpiv-btw`; install this one yourself when
+  umbrella package. It does not install `pi-btw`; install this one yourself when
   you want `/btw`.
 - [juicesharp/rpiv-mono](https://github.com/juicesharp/rpiv-mono#readme) — the rest
   of the rpiv family.

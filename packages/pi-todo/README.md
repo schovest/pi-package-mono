@@ -3,12 +3,6 @@
 [![npm version](https://img.shields.io/npm/v/@schovest/pi-todo.svg)](https://www.npmjs.com/package/@schovest/pi-todo)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-<div align="center">
-  <a href="https://github.com/juicesharp/rpiv-mono/tree/main/packages/rpiv-todo">
-    <img src="https://raw.githubusercontent.com/juicesharp/rpiv-mono/main/packages/rpiv-todo/docs/cover.png" alt="rpiv-todo — a persistent todo overlay for Pi Agent, showing a task panel with completed, in-progress, and pending rows" width="50%">
-  </a>
-</div>
-
 Give the model a task list you can see. `rpiv-todo` adds a `todo` tool, a
 `/todos` command, and a live panel above the editor to
 [Pi Agent](https://github.com/badlogic/pi-mono), so you always know what the
@@ -35,9 +29,7 @@ No todos yet. Ask the agent to add some!
 
 Then ask for something with several steps — "add a repository layer with tests,
 and track it as todos". The model calls `todo` and the panel appears above your
-input box, updating as work moves:
-
-![Todo overlay panel: a Todos (2/7) heading above two struck-through completed rows, one in-progress row with its activity label, and four pending rows](https://raw.githubusercontent.com/juicesharp/rpiv-mono/main/packages/rpiv-todo/docs/overlay.jpg)
+input box, updating as work moves.
 
 Press `ctrl+shift+t` to collapse the panel to its heading plus a one-line hint,
 and again to expand it. Run `/todos` at any time to print the full list grouped

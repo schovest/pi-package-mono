@@ -15,8 +15,8 @@ packages can depend on it: there is no CLI, and it registers nothing with [Pi Ag
 npm install @schovest/pi-config
 ```
 
-ESM only. The package ships TypeScript source — `exports` points at `./index.ts`, with no
-`main`, no `types`, and no compiled build — so you need a bundler or a TypeScript-aware runtime
+ESM only. The package ships TypeScript source — `exports` and `types` both point at
+`./index.ts`, with no compiled build — so you need a bundler or a TypeScript-aware runtime
 (`tsx`, Bun). Plain `node` cannot load it, and `--experimental-strip-types` refuses `.ts` files under `node_modules`.
 
 ## Quick start

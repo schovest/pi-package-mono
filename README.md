@@ -7,6 +7,14 @@
 | 包 | 用途 | npm |
 | --- | --- | --- |
 | `pi-mcp-adapter` | MCP (Model Context Protocol) 适配器 — 按需代理工具，懒加载连接，支持 OAuth、UI 集成 | [`@schovest/pi-mcp-adapter`](https://www.npmjs.com/package/@schovest/pi-mcp-adapter) |
+| `pi-btw` | `/btw` 侧问命令 — 不污染主会话的一次性提问覆盖层 | [`@schovest/pi-btw`](https://www.npmjs.com/package/@schovest/pi-btw) |
+| `pi-todo` | 模型的任务清单 — 实时覆盖层，`/reload` 与会话压缩后仍存活 | [`@schovest/pi-todo`](https://www.npmjs.com/package/@schovest/pi-todo) |
+| `pi-ask-user-question` | 结构化问卷工具 — 类型化选项替代自由文本猜测 | [`@schovest/pi-ask-user-question`](https://www.npmjs.com/package/@schovest/pi-ask-user-question) |
+| `pi-config` | 共享配置 I/O 工具 — XDG 路径解析、JSON 读写、TypeBox 校验 | [`@schovest/pi-config`](https://www.npmjs.com/package/@schovest/pi-config) |
+| `pi-i18n` | 本地化基础 — 语言检测、`/languages` 命令、跨包语言注册表 | [`@schovest/pi-i18n`](https://www.npmjs.com/package/@schovest/pi-i18n) |
+| `pi-test-utils` | 内部测试夹具（private，不发布） | [`@schovest/pi-test-utils`](https://www.npmjs.com/package/@schovest/pi-test-utils) |
+
+`pi-btw`、`pi-todo`、`pi-ask-user-question`、`pi-config`、`pi-i18n`、`pi-test-utils` 基于 [@juicesharp/rpiv-*](https://github.com/juicesharp/rpiv-mono) 2.4.0 移植。
 
 ## 仓库结构
 
