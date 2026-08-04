@@ -23,7 +23,8 @@ Pi discovers the extension through the manifest block in `package.json`:
 ```
 
 That is the entire registration surface. The package ships no skills, no agents,
-no `bin`, and declares no `exports` or `main`. A test (`ship-manifest.test.ts`)
+and no `bin`; its `exports` map points straight at `index.ts`, and it declares no
+`main`. A test (`ship-manifest.test.ts`)
 asserts that the published `files` list covers every production module.
 
 ## What gets registered
@@ -153,8 +154,9 @@ rest render inside the overlay in the error style.
 
 ## Boundaries
 
-- **No runtime dependencies.** No `dependencies`, no `devDependencies` — only the
-  three `@earendil-works` peers.
+- **No runtime dependencies.** No third-party `dependencies` — `devDependencies`
+  carry only the three `@earendil-works/pi-*` packages (0.80.5) for type checking;
+  the three `@earendil-works` peers are optional.
 - **No sibling imports at runtime.** `pi-compat.ts` deliberately duplicates
   rpiv-core's `isModuleNotFound` rather than importing it, because the rpiv
   packages never import each other at runtime.
