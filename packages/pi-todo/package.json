@@ -1,0 +1,41 @@
+{
+  "name": "@schovest/pi-todo",
+  "version": "0.1.2",
+  "description": "Pi extension. A todo list for the model, rendered as a live overlay that survives /reload and conversation compaction.",
+  "type": "module",
+  "types": "./index.ts",
+  "exports": {
+    ".": { "types": "./index.ts", "import": "./index.ts", "default": "./index.ts" }
+  },
+  "license": "MIT",
+  "author": "juicesharp",
+  "keywords": ["pi-package", "pi-extension", "pi", "todo"],
+  "files": [
+    "config.ts", "index.ts", "locales/", "todo.ts", "todo-overlay.ts", "LICENSE", "docs/", "README.md",
+    "state/invariants.ts", "state/i18n-bridge.ts", "state/replay.ts", "state/selectors.ts",
+    "state/state-reducer.ts", "state/state.ts", "state/store.ts", "state/task-graph.ts",
+    "tool/response-envelope.ts", "tool/types.ts", "view/format.ts"
+  ],
+  "pi": { "extensions": ["./index.ts"] },
+  "dependencies": {
+    "@schovest/pi-config": "^0.1.2",
+    "typebox": "^1.3.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "0.80.5",
+    "@earendil-works/pi-coding-agent": "0.80.5",
+    "@earendil-works/pi-tui": "0.80.5"
+  },
+  "peerDependencies": {
+    "@schovest/pi-i18n": "*",
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "peerDependenciesMeta": {
+    "@schovest/pi-i18n": { "optional": true },
+    "@earendil-works/pi-ai": { "optional": true },
+    "@earendil-works/pi-coding-agent": { "optional": true },
+    "@earendil-works/pi-tui": { "optional": true }
+  }
+}
