@@ -77,7 +77,7 @@ describe("i18n soft-peer shim — source shape", () => {
 // Held in a variable so TypeScript treats the specifier as dynamic — a literal
 // string here would trip TS2307 ("cannot find module") at compile time even
 // though the test deliberately wants the resolution to fail at runtime.
-const MISSING_SDK_SPECIFIER = "@juicesharp/__definitely-not-installed__";
+const MISSING_SDK_SPECIFIER = "@schovest/pi-__definitely-not-installed__";
 
 describe("i18n soft-peer shim — runtime fallback contract", () => {
   it("await import() of a non-existent specifier rejects (catchable)", async () => {

@@ -77,10 +77,10 @@ describe("registerLocalesFromDir", () => {
   it("defaults the warn label to the namespace when no label option is supplied", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    registerLocalesFromDir("@juicesharp/example", pkgUrl);
+    registerLocalesFromDir("@schovest/pi-example", pkgUrl);
 
     const messages = warn.mock.calls.map((c) => String(c[0]));
-    expect(messages.every((m) => m.startsWith("@juicesharp/example:"))).toBe(true);
+    expect(messages.every((m) => m.startsWith("@schovest/pi-example:"))).toBe(true);
     warn.mockRestore();
   });
 });
