@@ -46,7 +46,19 @@ npm workspaces 单仓。克隆、`npm install` 到根目录即可。Node 20+。
 
 推送到 `main` 或 PR 时：`check` → `test` → `coverage`（Node 20 + 22）。
 
-推送 `v*` 标签时：`check` → `test` → `npm publish`。
+推送到 `main` 时还会触发自动发布：`check` → `test` → 逐包 `npm publish`。**已发布过的版本自动跳过**（不会重复发布）；`private` 包（如 `pi-test-utils`）不发布。不依赖 git tag。
+
+## 版本升级规范
+
+代码发生变动后，发布前需按 [SemVer](https://semver.org/lang/zh-CN/) 标准规范升级版本（lockstep，所有包同步）：
+
+| 变动类型 | 命令 | 示例 |
+| --- | --- | --- |
+| 修复 bug、非行为性改动 | `npm run version:patch` | 0.1.2 → 0.1.3 |
+| 新增向后兼容功能 | `npm run version:minor` | 0.1.2 → 0.2.0 |
+| 破坏性变更 | `npm run version:major` | 0.1.2 → 1.0.0 |
+
+升级命令会同步所有工作区包版本与内部依赖（`scripts/sync-versions.js`）。若代码有变动但未升版，CI 发布时会跳过已发布版本——**新代码不会被发布**，需先执行上述升级命令再推送。
 
 ## License
 

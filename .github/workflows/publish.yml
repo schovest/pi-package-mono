@@ -2,8 +2,7 @@ name: Publish to npm
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
 
 permissions: {}
 
@@ -30,5 +29,21 @@ jobs:
 
       - run: npm run test
 
-      - name: Publish all workspace packages
-        run: npm publish -ws --access public --provenance
+      - name: Publish workspace packages (skip already-published versions)
+        run: |
+          set -e
+          for dir in packages/*/; do
+            name=$(node -p "require('./${dir}package.json').name")
+            version=$(node -p "require('./${dir}package.json').version")
+            private=$(node -p "require('./${dir}package.json').private || false")
+            if [ "$private" = "true" ]; then
+              echo "skip $name@$version (private, not published)"
+              continue
+            fi
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "skip $name@$version (already published)"
+              continue
+            fi
+            echo "publish $name@$version"
+            npm publish --workspace "$name" --access public --provenance
+          done
