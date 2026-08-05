@@ -15,8 +15,9 @@
     "version:minor": "npm version minor -ws --no-git-tag-version && node scripts/sync-versions.js && rm -rf node_modules packages/*/node_modules package-lock.json && npm install",
     "version:major": "npm version major -ws --no-git-tag-version && node scripts/sync-versions.js && rm -rf node_modules packages/*/node_modules package-lock.json && npm install",
     "prepublishOnly": "npm run check",
-    "publish": "npm run prepublishOnly && npm publish -ws --access public",
-    "publish:dry": "npm run prepublishOnly && npm publish -ws --access public --dry-run"
+    "publish": "npm run prepublishOnly && node scripts/publish-packages.mjs",
+    "publish:first": "npm run prepublishOnly && node scripts/publish-packages.mjs first",
+    "publish:dry": "npm run prepublishOnly && node scripts/publish-packages.mjs --dry-run"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
