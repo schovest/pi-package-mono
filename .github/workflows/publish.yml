@@ -55,6 +55,13 @@ jobs:
 
       - name: Report publish failure as issue
         if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           body="$(cat publish-output.log 2>/dev/null | tail -60 || echo 'no log captured')"
-          gh issue create --title "ci: publish failed (auto-report)" --body "$body"
+          echo "::notice::reporting publish failure, log lines: $(echo "$body" | wc -l)"
+          jq -n --arg title "ci: publish failed (auto-report)" --arg body "$body" '{title: $title, body: $body}' | \
+            curl -sS -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/issues" | head -5
