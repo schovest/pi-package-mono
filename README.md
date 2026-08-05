@@ -44,7 +44,7 @@ npm workspaces 单仓。克隆、`npm install` 到根目录即可。Node 20+。
 
 ### CI
 
-推送到 `main` 或 PR 时：`check` → `test` → `coverage`（Node 20 + 22）。
+推送到 `main` 或 PR 时：`check` → `test` → `coverage`（Node 22 + 24）。
 
 推送到 `main` 时还会触发自动发布：`check` → `test` → 逐包 `npm publish`。**已发布过的版本自动跳过**（不会重复发布）；`private` 包（如 `pi-test-utils`）不发布。不依赖 git tag。
 
