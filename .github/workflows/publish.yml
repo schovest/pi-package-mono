@@ -10,7 +10,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       id-token: write
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -35,7 +35,6 @@ jobs:
         run: |
           set -e
           set -o pipefail
-          exec > >(tee publish-output.log) 2>&1
           for dir in packages/*/; do
             name=$(node -p "require('./${dir}package.json').name")
             version=$(node -p "require('./${dir}package.json').version")
@@ -51,16 +50,3 @@ jobs:
             echo "publish $name@$version"
             npm publish --workspace "$name" --access public --provenance
           done
-
-      - name: Report publish failure (push log to ci-error-log)
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p .ci
-          cp publish-output.log .ci/publish-error.log 2>/dev/null || echo "no log captured" > .ci/publish-error.log
-          git config user.name "ci-bot"
-          git config user.email "ci-bot@users.noreply.github.com"
-          git add .ci/publish-error.log
-          git commit -m "ci: publish error log [skip ci]" || true
-          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:ci-error-log
