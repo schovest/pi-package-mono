@@ -1,44 +1,48 @@
 {
-  "name": "@schovest/pi-goal",
-  "version": "0.1.3",
-  "description": "Goal orchestration extension for Pi coding agent",
-  "type": "module",
-  "types": "./index.ts",
-  "exports": {
-    ".": {
-      "types": "./index.ts",
-      "import": "./index.ts",
-      "default": "./index.ts"
-    }
-  },
-  "license": "MIT",
-  "keywords": [
-    "pi-package",
-    "pi",
-    "goal",
-    "orchestration",
-    "coding-agent"
-  ],
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ]
-  },
-  "files": [
-    "index.ts"
-  ],
-  "dependencies": {
-    "typebox": "^1.3.0"
-  },
-  "devDependencies": {
-    "@earendil-works/pi-coding-agent": "0.80.5"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*"
-  },
-  "peerDependenciesMeta": {
-    "@earendil-works/pi-coding-agent": {
-      "optional": true
-    }
-  }
+	"name": "@schovest/pi-goal",
+	"version": "0.1.3",
+	"description": "Goal orchestration extension for Pi coding agent",
+	"type": "module",
+	"types": "./index.ts",
+	"exports": {
+		".": {
+			"types": "./index.ts",
+			"import": "./index.ts",
+			"default": "./index.ts"
+		}
+	},
+	"license": "MIT",
+	"keywords": [
+		"pi-package",
+		"pi",
+		"goal",
+		"orchestration",
+		"coding-agent"
+	],
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	},
+	"files": [
+		"index.ts"
+	],
+	"dependencies": {
+		"typebox": "^1.3.0"
+	},
+	"devDependencies": {
+		"@earendil-works/pi-coding-agent": "0.80.5"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*"
+	},
+	"peerDependenciesMeta": {
+		"@earendil-works/pi-coding-agent": {
+			"optional": true
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/schovest/pi-package-mono.git"
+	}
 }

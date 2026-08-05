@@ -1,45 +1,49 @@
 {
-  "name": "@schovest/pi-sudo-helper",
-  "version": "0.1.3",
-  "description": "Sudo password helper extension for Pi coding agent",
-  "type": "module",
-  "types": "./index.ts",
-  "exports": {
-    ".": {
-      "types": "./index.ts",
-      "import": "./index.ts",
-      "default": "./index.ts"
-    }
-  },
-  "license": "MIT",
-  "keywords": [
-    "pi-package",
-    "pi",
-    "sudo",
-    "coding-agent"
-  ],
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ]
-  },
-  "files": [
-    "index.ts"
-  ],
-  "devDependencies": {
-    "@earendil-works/pi-coding-agent": "0.80.5",
-    "@earendil-works/pi-tui": "0.80.5"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*"
-  },
-  "peerDependenciesMeta": {
-    "@earendil-works/pi-coding-agent": {
-      "optional": true
-    },
-    "@earendil-works/pi-tui": {
-      "optional": true
-    }
-  }
+	"name": "@schovest/pi-sudo-helper",
+	"version": "0.1.3",
+	"description": "Sudo password helper extension for Pi coding agent",
+	"type": "module",
+	"types": "./index.ts",
+	"exports": {
+		".": {
+			"types": "./index.ts",
+			"import": "./index.ts",
+			"default": "./index.ts"
+		}
+	},
+	"license": "MIT",
+	"keywords": [
+		"pi-package",
+		"pi",
+		"sudo",
+		"coding-agent"
+	],
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	},
+	"files": [
+		"index.ts"
+	],
+	"devDependencies": {
+		"@earendil-works/pi-coding-agent": "0.80.5",
+		"@earendil-works/pi-tui": "0.80.5"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	},
+	"peerDependenciesMeta": {
+		"@earendil-works/pi-coding-agent": {
+			"optional": true
+		},
+		"@earendil-works/pi-tui": {
+			"optional": true
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/schovest/pi-package-mono.git"
+	}
 }

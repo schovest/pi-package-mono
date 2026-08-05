@@ -1,51 +1,55 @@
 {
-  "name": "@schovest/pi-test-utils",
-  "version": "0.1.3",
-  "description": "Internal test fixtures for pi-package-mono (not published)",
-  "private": true,
-  "type": "module",
-  "license": "MIT",
-  "author": "juicesharp",
-  "files": [
-    "index.ts",
-    "pi.ts",
-    "session.ts",
-    "contract.ts",
-    "theme.ts",
-    "fetch.ts",
-    "exec.ts",
-    "spawn.ts",
-    "fs.ts",
-    "manifest.ts",
-    "concurrent-host.ts",
-    "workflow-types.ts",
-    "README.md",
-    "LICENSE"
-  ],
-  "exports": {
-    ".": "./index.js",
-    "./pi": "./pi.js",
-    "./session": "./session.js",
-    "./contract": "./contract.js",
-    "./theme": "./theme.js",
-    "./fetch": "./fetch.js",
-    "./exec": "./exec.js",
-    "./spawn": "./spawn.js",
-    "./fs": "./fs.js",
-    "./manifest": "./manifest.js"
-  },
-  "devDependencies": {
-    "@earendil-works/pi-ai": "0.80.5",
-    "@earendil-works/pi-coding-agent": "0.80.5",
-    "@earendil-works/pi-tui": "0.80.5",
-    "typebox": "^1.3.0",
-    "vitest": "^4.1.10"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-ai": "*",
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*",
-    "typebox": "*",
-    "vitest": "*"
-  }
+	"name": "@schovest/pi-test-utils",
+	"version": "0.1.3",
+	"description": "Internal test fixtures for pi-package-mono (not published)",
+	"private": true,
+	"type": "module",
+	"license": "MIT",
+	"author": "juicesharp",
+	"files": [
+		"index.ts",
+		"pi.ts",
+		"session.ts",
+		"contract.ts",
+		"theme.ts",
+		"fetch.ts",
+		"exec.ts",
+		"spawn.ts",
+		"fs.ts",
+		"manifest.ts",
+		"concurrent-host.ts",
+		"workflow-types.ts",
+		"README.md",
+		"LICENSE"
+	],
+	"exports": {
+		".": "./index.js",
+		"./pi": "./pi.js",
+		"./session": "./session.js",
+		"./contract": "./contract.js",
+		"./theme": "./theme.js",
+		"./fetch": "./fetch.js",
+		"./exec": "./exec.js",
+		"./spawn": "./spawn.js",
+		"./fs": "./fs.js",
+		"./manifest": "./manifest.js"
+	},
+	"devDependencies": {
+		"@earendil-works/pi-ai": "0.80.5",
+		"@earendil-works/pi-coding-agent": "0.80.5",
+		"@earendil-works/pi-tui": "0.80.5",
+		"typebox": "^1.3.0",
+		"vitest": "^4.1.10"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*",
+		"typebox": "*",
+		"vitest": "*"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/schovest/pi-package-mono.git"
+	}
 }

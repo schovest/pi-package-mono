@@ -73,5 +73,9 @@
 		"@earendil-works/pi-tui": {
 			"optional": true
 		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/schovest/pi-package-mono.git"
 	}
 }

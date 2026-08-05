@@ -1,62 +1,66 @@
 {
-  "name": "@schovest/pi-btw",
-  "version": "0.1.3",
-  "description": "Pi extension. The /btw slash command, for putting a one-off side question to the same primary model without polluting the main conversation.",
-  "type": "module",
-  "types": "./index.ts",
-  "exports": {
-    ".": {
-      "types": "./index.ts",
-      "import": "./index.ts",
-      "default": "./index.ts"
-    }
-  },
-  "license": "MIT",
-  "author": "juicesharp",
-  "keywords": [
-    "pi-package",
-    "pi-extension",
-    "pi",
-    "btw",
-    "side-question",
-    "overlay"
-  ],
-  "files": [
-    "index.ts",
-    "btw.ts",
-    "btw-budget.ts",
-    "btw-messages.ts",
-    "btw-ui.ts",
-    "pi-compat.ts",
-    "prompts/",
-    "docs/",
-    "README.md",
-    "LICENSE"
-  ],
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ]
-  },
-  "devDependencies": {
-    "@earendil-works/pi-ai": "0.80.5",
-    "@earendil-works/pi-coding-agent": "0.80.5",
-    "@earendil-works/pi-tui": "0.80.5"
-  },
-  "peerDependencies": {
-    "@earendil-works/pi-ai": "*",
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*"
-  },
-  "peerDependenciesMeta": {
-    "@earendil-works/pi-ai": {
-      "optional": true
-    },
-    "@earendil-works/pi-coding-agent": {
-      "optional": true
-    },
-    "@earendil-works/pi-tui": {
-      "optional": true
-    }
-  }
+	"name": "@schovest/pi-btw",
+	"version": "0.1.3",
+	"description": "Pi extension. The /btw slash command, for putting a one-off side question to the same primary model without polluting the main conversation.",
+	"type": "module",
+	"types": "./index.ts",
+	"exports": {
+		".": {
+			"types": "./index.ts",
+			"import": "./index.ts",
+			"default": "./index.ts"
+		}
+	},
+	"license": "MIT",
+	"author": "juicesharp",
+	"keywords": [
+		"pi-package",
+		"pi-extension",
+		"pi",
+		"btw",
+		"side-question",
+		"overlay"
+	],
+	"files": [
+		"index.ts",
+		"btw.ts",
+		"btw-budget.ts",
+		"btw-messages.ts",
+		"btw-ui.ts",
+		"pi-compat.ts",
+		"prompts/",
+		"docs/",
+		"README.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"./index.ts"
+		]
+	},
+	"devDependencies": {
+		"@earendil-works/pi-ai": "0.80.5",
+		"@earendil-works/pi-coding-agent": "0.80.5",
+		"@earendil-works/pi-tui": "0.80.5"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	},
+	"peerDependenciesMeta": {
+		"@earendil-works/pi-ai": {
+			"optional": true
+		},
+		"@earendil-works/pi-coding-agent": {
+			"optional": true
+		},
+		"@earendil-works/pi-tui": {
+			"optional": true
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/schovest/pi-package-mono.git"
+	}
 }
