@@ -34,6 +34,8 @@ jobs:
       - name: Publish workspace packages (skip already-published versions)
         run: |
           set -e
+          set -o pipefail
+          exec > >(tee publish-output.log) 2>&1
           for dir in packages/*/; do
             name=$(node -p "require('./${dir}package.json').name")
             version=$(node -p "require('./${dir}package.json').version")
@@ -49,3 +51,11 @@ jobs:
             echo "publish $name@$version"
             npm publish --workspace "$name" --access public --provenance
           done
+
+      - name: Upload publish log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-log
+          path: publish-output.log
+          if-no-files-found: ignore
