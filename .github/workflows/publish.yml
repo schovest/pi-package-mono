@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      issues: write
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
@@ -52,10 +53,8 @@ jobs:
             npm publish --workspace "$name" --access public --provenance
           done
 
-      - name: Upload publish log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: publish-log
-          path: publish-output.log
-          if-no-files-found: ignore
+      - name: Report publish failure as issue
+        if: failure()
+        run: |
+          body="$(cat publish-output.log 2>/dev/null | tail -60 || echo 'no log captured')"
+          gh issue create --title "ci: publish failed (auto-report)" --body "$body"
