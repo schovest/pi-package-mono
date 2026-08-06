@@ -2,8 +2,10 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isKeyRelease, isKeyRepeat, matchesKey } from "@earendil-works/pi-tui";
 import { loadConfig, resolveCollapseKey, validateGuidanceFields } from "./config.js";
 import {
+  ASK_USER_ABORTED_EVENT,
   ASK_USER_BLOCKED_EVENT,
   ASK_USER_PROMPT_EVENT,
+  type AskUserAbortedEventPayload,
   type AskUserBlockedEventPayload,
   type AskUserPromptEventPayload,
 } from "./events.js";
@@ -45,6 +47,27 @@ function emitAskUserPromptEvent(pi: ExtensionAPI, params: QuestionParams): void 
 function emitAskUserBlockedEvent(pi: ExtensionAPI, active: boolean): void {
   const payload: AskUserBlockedEventPayload = { active };
   pi.events.emit(ASK_USER_BLOCKED_EVENT, payload);
+}
+
+function emitAskUserAbortedEvent(pi: ExtensionAPI): void {
+  const payload: AskUserAbortedEventPayload = { aborted: true };
+  pi.events.emit(ASK_USER_ABORTED_EVENT, payload);
+}
+
+/**
+ * Emit `rpiv:ask-user:aborted` for any user-initiated cancellation — Esc in the
+ * TUI, dialog dismissal in the RPC walker — then build the shared envelope.
+ * Non-user paths (`result` null/undefined: the host never showed the questions)
+ * emit nothing, so listeners never see an abort for a questionnaire the user
+ * could not have aborted.
+ */
+function buildResponseWithAbortEvent(
+  pi: ExtensionAPI,
+  result: QuestionnaireResult | null | undefined,
+  typed: QuestionParams,
+) {
+  if (result?.cancelled) emitAskUserAbortedEvent(pi);
+  return buildQuestionnaireResponse(result, typed);
 }
 
 /** Canonical tool name — single source of truth shared with the reconcile module. */
@@ -173,7 +196,7 @@ Preview content is rendered as markdown in a monospace box. Multi-line text with
       if ((ctx as { mode?: string }).mode === "rpc" && hasDialogUI(ctx.ui)) {
         emitAskUserBlockedEvent(pi, true);
         try {
-          return buildQuestionnaireResponse(await runRpcQuestionnaire(ctx.ui, typed), typed);
+          return buildResponseWithAbortEvent(pi, await runRpcQuestionnaire(ctx.ui, typed), typed);
         } finally {
           emitAskUserBlockedEvent(pi, false);
         }
@@ -286,12 +309,12 @@ Preview content is rendered as markdown in a monospace box. Multi-line text with
         // model the user never saw the questions.
         if (result === undefined) {
           if (hasDialogUI(ctx.ui)) {
-            return buildQuestionnaireResponse(await runRpcQuestionnaire(ctx.ui, typed), typed);
+            return buildResponseWithAbortEvent(pi, await runRpcQuestionnaire(ctx.ui, typed), typed);
           }
           return buildToolResult(ERROR_NO_CUSTOM_UI, { answers: [], cancelled: true, error: "no_custom_ui" });
         }
 
-        return buildQuestionnaireResponse(result, typed);
+        return buildResponseWithAbortEvent(pi, result, typed);
       } finally {
         removeOverlayInputListener?.();
         emitAskUserBlockedEvent(pi, false);

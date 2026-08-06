@@ -332,6 +332,39 @@ describe("ask_user_question.execute — event emission", () => {
     ]);
   });
 
+  it("emits rpiv:ask-user:aborted when the user cancels, and not on completion", async () => {
+    const mockEmit = vi.fn();
+    const { pi, captured } = createMockPi({
+      events: { emit: mockEmit, on: vi.fn(() => () => {}) },
+    });
+    registerAskUserQuestionTool(pi);
+    const tool = captured.tools.get("ask_user_question")!;
+
+    // Esc → cancelled result → aborted event fires; envelope stays the decline message.
+    await tool.execute?.(
+      "tc",
+      validParams() as never,
+      undefined as never,
+      undefined as never,
+      ctxWithCustom({ answers: [], cancelled: true }) as never,
+    );
+    expect(mockEmit).toHaveBeenCalledWith("rpiv:ask-user:aborted", { aborted: true });
+
+    // Normal completion → no aborted event.
+    mockEmit.mockClear();
+    await tool.execute?.(
+      "tc",
+      validParams() as never,
+      undefined as never,
+      undefined as never,
+      ctxWithCustom({
+        cancelled: false,
+        answers: [{ questionIndex: 0, question: "Which library?", kind: "option", answer: "React" }],
+      }) as never,
+    );
+    expect(mockEmit).not.toHaveBeenCalledWith("rpiv:ask-user:aborted", { aborted: true });
+  });
+
   it("does NOT emit event when UI is unavailable", async () => {
     const { pi, captured } = createMockPi();
     registerAskUserQuestionTool(pi);
@@ -342,6 +375,7 @@ describe("ask_user_question.execute — event emission", () => {
     await tool.execute?.("tc", validParams() as never, undefined as never, undefined as never, ctx as never);
 
     expect(captured.eventsEmitted.has("rpiv:ask-user:prompt")).toBe(false);
+    expect(captured.eventsEmitted.has("rpiv:ask-user:aborted")).toBe(false);
   });
 
   it("does NOT emit event when validation fails", async () => {

@@ -116,6 +116,25 @@ The channel name is `rpiv:ask-user:prompt`. Preview *content* is deliberately no
 in the payload — only `hasPreview: boolean` — so listeners forwarding the event across a
 process or network boundary stay cheap.
 
+The package also publishes an abort event when the user aborts the questionnaire by
+pressing Esc (TUI) or dismissing a dialog (RPC walker):
+
+```ts
+import { ASK_USER_ABORTED_EVENT, type AskUserAbortedEventPayload } from "@schovest/pi-ask-user-question/events";
+
+pi.events.on(ASK_USER_ABORTED_EVENT, (payload: AskUserAbortedEventPayload) => {
+  // payload.aborted === true — the user abandoned the questionnaire
+});
+```
+
+The channel name is `rpiv:ask-user:aborted`. It fires once, before the tool result
+resolves with `cancelled: true` — the questionnaire itself behaves exactly as before.
+It is never emitted for validation errors or hosts that never showed the questions, so
+listeners can rely on it meaning "the user saw and rejected the questionnaire".
+
+The questionnaire also emits `rpiv:ask-user:blocked` (`{ active: boolean }`) while it
+awaits input — see the CHANGELOG for the full event history.
+
 Stability policy for the `rpiv:*` namespace: channel names are immutable, payload changes
 are append-only and always optional, payloads stay JSON-safe, and any breaking change ships
 as a new channel (e.g. `rpiv:ask-user:prompt.v2`) rather than a version field.

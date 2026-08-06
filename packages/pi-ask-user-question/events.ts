@@ -37,6 +37,20 @@ export interface AskUserBlockedEventPayload {
   active: boolean;
 }
 
+/**
+ * Emitted once when the user aborts the questionnaire with Esc (TUI) or by
+ * dismissing a dialog (RPC walker) — the questionnaire closes with
+ * `cancelled: true` exactly as before; this event only notifies external
+ * listeners (e.g. status/notification plugins) that the abort happened.
+ * Not emitted for validation errors or hosts that never showed the questions.
+ */
+export const ASK_USER_ABORTED_EVENT = "rpiv:ask-user:aborted" as const;
+
+export interface AskUserAbortedEventPayload {
+  /** Always true — present so listeners can discriminate the event from future append-only fields. */
+  aborted: true;
+}
+
 export interface AskUserPromptQuestion {
   /** The full question text, exactly as the agent authored it. */
   question: string;

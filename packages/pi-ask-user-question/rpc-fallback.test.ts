@@ -104,6 +104,8 @@ describe("ask_user_question.execute — RPC dialog walker (ctx.mode === 'rpc')",
     const select = vi.fn(async (_t: string, options: string[]) => options[0]);
     await run(tool, SINGLE, ctxRpc({ select }));
     expect(captured.eventsEmitted.get("rpiv:ask-user:blocked")).toEqual([{ active: true }, { active: false }]);
+    // Normal completion is not an abort.
+    expect(captured.eventsEmitted.has("rpiv:ask-user:aborted")).toBe(false);
   });
 
   it("appends the 'Type something.' sentinel row sourced from ROW_INTENT_META", async () => {
@@ -177,12 +179,13 @@ describe("ask_user_question.execute — RPC dialog walker (ctx.mode === 'rpc')",
     expect(r?.content[0]).toMatchObject({ text: expect.stringContaining('"Pick colors?"="(no input)"') });
   });
 
-  it("dismiss (select resolves undefined) → decline envelope", async () => {
-    const tool = register();
+  it("dismiss (select resolves undefined) → decline envelope + aborted event", async () => {
+    const { tool, captured } = registerWithCapture();
     const select = vi.fn(async () => undefined);
     const r = await run(tool, SINGLE, ctxRpc({ select }));
     expect(r?.details).toMatchObject({ cancelled: true });
     expect(r?.content[0]).toMatchObject({ text: expect.stringContaining("declined") });
+    expect(captured.eventsEmitted.get("rpiv:ask-user:aborted")).toEqual([{ aborted: true }]);
   });
 
   it("walks multiple questions sequentially, one dialog each", async () => {
