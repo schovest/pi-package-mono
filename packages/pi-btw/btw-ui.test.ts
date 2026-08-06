@@ -1,5 +1,5 @@
 import type { Theme } from "@earendil-works/pi-coding-agent";
-import { type TUI, visibleWidth } from "@earendil-works/pi-tui";
+import { type MarkdownTheme, type TUI, visibleWidth } from "@earendil-works/pi-tui";
 import { makeTui } from "@schovest/pi-test-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BtwOverlayController, showBtwOverlay } from "./btw-ui.js";
@@ -11,6 +11,25 @@ const identityTheme = {
   bold: (s: string) => s,
   strikethrough: (s: string) => s,
 } as unknown as Theme;
+
+// 测试环境没有 initTheme()，getMarkdownTheme() 会抛错；identity 主题让断言只看布局。
+const identityMarkdownTheme: MarkdownTheme = {
+  heading: (s) => s,
+  link: (s) => s,
+  linkUrl: (s) => s,
+  code: (s) => s,
+  codeBlock: (s) => s,
+  codeBlockBorder: (s) => s,
+  quote: (s) => s,
+  quoteBorder: (s) => s,
+  hr: (s) => s,
+  listBullet: (s) => s,
+  bold: (s) => s,
+  italic: (s) => s,
+  strikethrough: (s) => s,
+  underline: (s) => s,
+  highlightCode: (code) => code.split("\n"),
+};
 
 function makeTurn(q: string, a = "ans"): BtwTurn {
   return {
@@ -42,6 +61,7 @@ function makeController(opts: { question?: string; history?: BtwTurn[]; tui?: TU
     done,
     controller,
     onClearHistory,
+    identityMarkdownTheme, // 新增：注入 identity markdown 主题
   );
   return { ctl, tui, done, controller, onClearHistory };
 }
@@ -96,6 +116,40 @@ describe("BtwOverlayController — setAnswer", () => {
     expect(out.some((l) => l.includes("line1"))).toBe(true);
     expect(out.some((l) => l.includes("line2"))).toBe(true);
     expect(out.some((l) => l.includes("line3"))).toBe(true);
+  });
+});
+
+describe("BtwOverlayController — markdown answer rendering", () => {
+  it("renders headings with their text (the '#' marker is consumed)", () => {
+    const { ctl } = makeController();
+    ctl.setAnswer("# Title");
+    expect(ctl.render(80).join("\n")).toContain("Title");
+  });
+
+  it("renders bold inline text", () => {
+    const { ctl } = makeController();
+    ctl.setAnswer("**bold** text");
+    expect(ctl.render(80).join("\n")).toContain("bold");
+  });
+
+  it("renders inline code", () => {
+    const { ctl } = makeController();
+    ctl.setAnswer("run `npm i` now");
+    expect(ctl.render(80).join("\n")).toContain("npm i");
+  });
+
+  it("renders fenced code blocks with language fence and body", () => {
+    const { ctl } = makeController();
+    ctl.setAnswer("```ts\nconst x = 1;\n```");
+    const out = ctl.render(80).join("\n");
+    expect(out).toContain("```ts");
+    expect(out).toContain("const x = 1;");
+  });
+
+  it("renders links with their visible text", () => {
+    const { ctl } = makeController();
+    ctl.setAnswer("see [pi](https://pi.ai)");
+    expect(ctl.render(80).join("\n")).toContain("pi");
   });
 });
 

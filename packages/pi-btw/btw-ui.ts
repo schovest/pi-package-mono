@@ -24,11 +24,13 @@
  *   (f fork key deferred)
  */
 
-import type { ExtensionCommandContext, Theme } from "@earendil-works/pi-coding-agent";
+import { type ExtensionCommandContext, type Theme, getMarkdownTheme } from "@earendil-works/pi-coding-agent";
 import type { OverlayOptions } from "@earendil-works/pi-tui";
 import {
   type Component,
   Key,
+  Markdown,
+  type MarkdownTheme,
   type TUI,
   matchesKey,
   truncateToWidth,
@@ -78,6 +80,7 @@ export class BtwOverlayController implements Component {
   private scrollOffset = 0;
   private trimmed = false;
   private history: BtwTurn[];
+  private readonly markdown: Markdown;
 
   constructor(
     private readonly question: string,
@@ -87,13 +90,16 @@ export class BtwOverlayController implements Component {
     private readonly done: (result?: undefined) => void,
     private readonly controller: AbortController,
     private readonly onClearHistory: () => void,
+    markdownTheme: MarkdownTheme = getMarkdownTheme(),
   ) {
     this.history = [...history];
+    this.markdown = new Markdown("", 0, 0, markdownTheme);
   }
 
   setAnswer(text: string): void {
     this.mode = "answer";
     this.answer = text;
+    this.markdown.setText(text);
     this.tui.requestRender();
   }
 
@@ -237,7 +243,7 @@ export class BtwOverlayController implements Component {
     if (this.mode === "error") {
       return indent(this.wrapBodyLines(this.error, bodyWidth, (s) => this.theme.fg("error", s)));
     }
-    return indent(this.wrapBodyLines(this.answer, bodyWidth));
+    return indent(this.markdown.render(bodyWidth));
   }
 }
 

@@ -82,12 +82,19 @@ banner        — your question on a themed stripe, padded to full width
 history       — prior "/btw <q>" lines for this session
 echo          — "/btw <q>" for the current question
 (blank)
-answer        — "…" while pending, the answer text, or the error in red
+answer        — "…" while pending, the markdown-rendered answer, or the error in red
 (blank)
 footer        — key hints
 ```
 
-History and echo use a 2-column left gutter; the answer body uses 4. The panel
+History and echo use a 2-column left gutter; the answer body uses 4.
+
+The answer body is rendered as markdown with the same getMarkdownTheme() theme
+as the main chat — headings, inline formatting, fenced code blocks (with syntax
+highlighting when a language is tagged), links, lists and tables included. The
+question lines (banner, history, echo) and the error text stay plain.
+
+The panel
 grows upward with content. When the natural height exceeds
 `floor(terminalRows × 0.85)` (terminal rows default to 24 if unknown, with a
 floor of 4 rows), it clips from the top and `↑`/`↓` scroll that window —
