@@ -2,9 +2,10 @@
 
 /**
  * Syncs intra-monorepo package dependency versions to match their current versions.
- * Enforces lockstep versioning across all workspace packages.
  *
- * Runs `dependencies` and `devDependencies` only — `peerDependencies` is untouched.
+ * Each package versions independently — this script only rewrites `dependencies` /
+ * `devDependencies` entries that point at workspace siblings, so a bumped package's
+ * dependents pick up the new version. `peerDependencies` is untouched.
  */
 
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -34,19 +35,6 @@ console.log("Current versions:");
 for (const [name, version] of Object.entries(versionMap).sort()) {
   console.log(`  ${name}: ${version}`);
 }
-
-// Verify all versions are the same (lockstep)
-const versions = new Set(Object.values(versionMap));
-if (versions.size > 1) {
-  console.error("\n❌ ERROR: Not all packages have the same version!");
-  console.error("Expected lockstep versioning. Run one of:");
-  console.error("  npm run version:patch");
-  console.error("  npm run version:minor");
-  console.error("  npm run version:major");
-  process.exit(1);
-}
-
-console.log("\n✅ All packages at same version (lockstep)");
 
 // Update all inter-package dependencies
 let totalUpdates = 0;

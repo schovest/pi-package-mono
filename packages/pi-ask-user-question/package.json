@@ -1,6 +1,6 @@
 {
 	"name": "@schovest/pi-ask-user-question",
-	"version": "0.1.3",
+	"version": "0.2.0",
 	"description": "Pi extension. A structured questionnaire the model can put to you when it would otherwise guess, with typed options instead of free-form replies.",
 	"type": "module",
 	"types": "./index.ts",

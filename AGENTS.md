@@ -9,7 +9,7 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 - 每个 `packages/<name>/` 是一个独立的 Pi 扩展
 - 扩展入口由 `package.json` 的 `pi.extensions` 声明
 - 发布原始 `.ts` 源码，不做构建
-- 所有包共享 lockstep 版本号
+- 每个包独立维护版本号（见「版本管理」）
 
 当前包（10 个）：
 
@@ -49,26 +49,33 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 
 ### 版本管理
 
-- Lockstep 版本：所有包使用同一版本号
-- `npm run version:patch|minor|major` 统一升级（按 SemVer 规范选择级别）
-- `scripts/sync-versions.js` 强制执行版本一致并同步内部依赖
+- 每个包独立维护版本号（不强制一致；按需只升有变动的包）
+- `npm run version:patch|minor|major -- <包>` 升级指定包（按 SemVer 规范选择级别；参数用包目录名
+  或 scoped 包名，例如 `npm run version:minor -- pi-ask-user-question`）
+- `scripts/bump-version.mjs` 执行升级：只改目标包的 `version` 字段，随后把 workspace 内部依赖引用
+  同步到当前版本，并保证 lockfile 与 manifest 一致（CI 的 `npm ci` 依赖）
+- `scripts/sync-versions.js` 把各包 `dependencies`/`devDependencies` 中指向 workspace 兄弟包的版本
+  同步为对应包的当前版本（`peerDependencies` 不动）
 
 ### 发布
 
-本地发布（走 npm 账号认证，2FA 用浏览器认证流或 OTP）：
+发布脚本与 CI 都按「当前版本已发布则跳过、未发布则发布」逐包执行，`private: true` 的包永不发布
+（如 pi-test-utils）。
 
-- `npm run publish` — 发布 `private: false` 且**当前版本未发布**的包（日常迭代）
-- `npm run publish:first` — 只发布**从未发布过**的包（新包首次上线）
-- `npm run publish:dry` — 预演（不真正发布）
-- 脚本：`scripts/publish-packages.mjs`（支持 `--otp <code>` / `NPM_OTP` 环境变量）
-
-CI 自动发布（push main 触发，`.github/workflows/publish.yml`）：
+CI 自动发布（push main 触发，`.github/workflows/publish.yml`）——**日常迭代的标准发布通道**：
 
 - npm **Trusted Publishing（OIDC）** 认证，无需 token；每个包需在 npmjs.com 配置 Trusted Publisher
   （schovest / pi-package-mono / publish.yml）
 - 逐包跳过已发布版本与 private 包
 - 依赖 `package.json` 的 `repository` 字段与 GitHub 仓库匹配（所有包已配置）
 - 工具链要求：Node ≥ 22.14、npm ≥ 11.5.1（CI 用 node 24）
+
+本地发布（走 npm 账号认证，2FA 用浏览器认证流或 OTP）——**仅用于新包首次上线**（npm 上从未发布过）：
+
+- `npm run publish:first` — 只发布从未发布过的包（新包首次上线）
+- `npm run publish:dry` — 预演（不真正发布）
+- `npm run publish` — 底层脚本的默认模式（发布当前版本未发布的包，可用于手动补发）
+- 脚本：`scripts/publish-packages.mjs`（支持 `--otp <code>` / `NPM_OTP` 环境变量）
 
 版本升级规范：代码变动后发布前必须升版，否则 CI/脚本会跳过已发布版本导致新代码不发布。
 
