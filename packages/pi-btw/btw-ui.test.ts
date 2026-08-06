@@ -123,13 +123,17 @@ describe("BtwOverlayController — markdown answer rendering", () => {
   it("renders headings with their text (the '#' marker is consumed)", () => {
     const { ctl } = makeController();
     ctl.setAnswer("# Title");
-    expect(ctl.render(80).join("\n")).toContain("Title");
+    const out = ctl.render(80).join("\n");
+    expect(out).toContain("Title");
+    expect(out).not.toContain("# Title"); // 回归守卫：h1 消费 # 标记，纯文本实现会原样输出
   });
 
   it("renders bold inline text", () => {
     const { ctl } = makeController();
     ctl.setAnswer("**bold** text");
-    expect(ctl.render(80).join("\n")).toContain("bold");
+    const out = ctl.render(80).join("\n");
+    expect(out).toContain("bold");
+    expect(out).not.toContain("**"); // 回归守卫：** 标记被解析消费，纯文本实现会原样输出
   });
 
   it("renders inline code", () => {
@@ -144,12 +148,21 @@ describe("BtwOverlayController — markdown answer rendering", () => {
     const out = ctl.render(80).join("\n");
     expect(out).toContain("```ts");
     expect(out).toContain("const x = 1;");
+    expect(out).toContain("  const x = 1;"); // 回归守卫：代码体行带组件默认 2 空格缩进
+  });
+
+  it("renders fenced code blocks without a language tag", () => {
+    const { ctl } = makeController();
+    ctl.setAnswer("```\nplain code\n```");
+    expect(ctl.render(80).join("\n")).toContain("plain code");
   });
 
   it("renders links with their visible text", () => {
     const { ctl } = makeController();
     ctl.setAnswer("see [pi](https://pi.ai)");
-    expect(ctl.render(80).join("\n")).toContain("pi");
+    const out = ctl.render(80).join("\n");
+    expect(out).toContain("pi");
+    expect(out).not.toContain("[pi]"); // 回归守卫：无 OSC-8 时 fallback 渲染为 "pi (https://pi.ai)"
   });
 });
 

@@ -7,7 +7,7 @@
  *   history  — "/btw <q>" (accent prefix + muted text), left-padded 2 cols
  *   echo     — "/btw <q>" (accent prefix + muted text), left-padded 2 cols
  *   blank
- *   answer   — body wrapped at width-2, left-padded 2 cols
+ *   answer   — markdown-rendered answer body (pi-tui Markdown, left-padded 4 cols)
  *   blank
  *   footer   — key hints (dim)                       sticky bottom
  *
@@ -75,7 +75,6 @@ export interface ShowBtwOverlayResult {
 
 export class BtwOverlayController implements Component {
   private mode: Mode = "pending";
-  private answer = "";
   private error = "";
   private scrollOffset = 0;
   private trimmed = false;
@@ -98,7 +97,6 @@ export class BtwOverlayController implements Component {
 
   setAnswer(text: string): void {
     this.mode = "answer";
-    this.answer = text;
     this.markdown.setText(text);
     this.tui.requestRender();
   }
