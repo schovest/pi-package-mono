@@ -20,7 +20,9 @@
  * 6. 提交时：解密 → 写入 cat stdin → 立即清零明文 Buffer
  * 7. 修改命令：仅第一个 sudo → SUDO_ASKPASS=<script> sudo -A
  * 8. bash 工具执行：sudo -A 调用 askpass → cat FIFO → 密码通过管道传递
- * 9. 后续 sudo 靠 sudo timestamp 缓存执行
+ * 9. 多个 sudo 场景：AI 按提示词约束生成 `sudo bash -c '...'` 外层包裹，
+ *    替换的正是外层 sudo；内层以 root 运行，其 sudo 全部免密，一次认证
+ *    即支持任意多个 sudo（不依赖 timestamp）
  */
 
 import { spawn } from "node:child_process";
@@ -36,7 +38,17 @@ const SUDO_HELPER_PROMPT = `
 
 系统已配置 sudo-helper：bash 命令中的 \`sudo\` 会自动弹出密码输入框，无需你处理密码。
 
-- 直接写 \`sudo <cmd>\` 即可，密码会自动注入
+- 单条 bash 命令中最多使用一个 sudo，且命令以 \`sudo\` 开头
+- 一条命令需要多个 root 操作时，整体包裹为：\`sudo bash -c '<整条命令>'\`
+  - 外层必须用单引号：当前 shell 不会提前展开命令内的 $、反引号
+  - 命令内部的字符串参数用双引号（与外层单引号不冲突，echo 内容也在单引号内）
+- 正确示例：
+  - \`sudo bash -c 'systemctl restart a && systemctl restart b'\`
+  - \`sudo bash -c 'echo "重启完成" && systemctl restart a'\`
+- 错误示例：
+  - \`sudo bash -c "systemctl restart a && systemctl restart b"\`（外层双引号，$ 会被提前展开）
+  - \`sudo systemctl restart a && sudo systemctl restart b\`（一条命令多个裸 sudo）
+- 每个 bash 调用需要一次密码输入，多个独立 root 操作优先合并进同一个 \`sudo bash -c\`
 - 禁止用 \`echo ... | sudo -S\`、手动 askpass、\`sudo -n\` 探测等方式处理 sudo 密码
 - 若命令被阻塞，说明用户取消了密码输入
 `;
@@ -166,7 +178,9 @@ export default function (pi: ExtensionAPI) {
     }
 
     // 修改命令：仅第一个 sudo → SUDO_ASKPASS=<script> sudo -A
-    // 后续 sudo 不修改，靠第一个 sudo 建立的 timestamp 缓存执行
+    // 多个 sudo 场景：AI 按系统提示词约束生成 `sudo bash -c '...'` 形态，
+    // 被替换的正是外层 sudo；内层命令以 root 运行，其所有 sudo 因调用者
+    // 是 root 而免密（sudoers: invoking user 为 root 时不要求密码）
     // session 记录原始 toolCall（无修改），args 用修改后的值执行
     const inject = `SUDO_ASKPASS='${scriptPath}' sudo -A`;
     const modifiedCommand = command.slice(0, sudoHit.index) + inject + command.slice(sudoHit.index + "sudo".length);

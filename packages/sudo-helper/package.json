@@ -1,6 +1,6 @@
 {
 	"name": "@schovest/pi-sudo-helper",
-	"version": "0.1.5",
+	"version": "0.1.6",
 	"description": "Sudo password helper extension for Pi coding agent",
 	"type": "module",
 	"types": "./index.ts",

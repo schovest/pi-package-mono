@@ -23,7 +23,9 @@ describe("sudo-helper 系统提示词注入", () => {
     expect(result).toBeDefined();
     expect(result!.systemPrompt.startsWith("BASE_PROMPT")).toBe(true);
     expect(result!.systemPrompt).toContain("已配置 sudo-helper");
-    expect(result!.systemPrompt).toContain("直接写 `sudo <cmd>` 即可");
+    expect(result!.systemPrompt).toContain("单条 bash 命令中最多使用一个 sudo");
+    expect(result!.systemPrompt).toContain("sudo bash -c 'systemctl restart a && systemctl restart b'");
+    expect(result!.systemPrompt).toContain("错误示例");
     expect(result!.systemPrompt).toContain("sudo -S");
   });
 
