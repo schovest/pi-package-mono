@@ -28,9 +28,7 @@ import { randomFillSync, randomUUID } from "node:crypto";
 import { chmod, unlink, writeFile } from "node:fs/promises";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { type Component, type Focusable, matchesKey } from "@earendil-works/pi-tui";
-
-/** 匹配命令中第一个 sudo（用于检测和单次替换） */
-const SUDO_PATTERN = /\bsudo(?=\s)/;
+import { findCommandSudo } from "./bash-scan.ts";
 
 /** 注入系统提示词的 sudo 说明（仅 TUI，与 hasUI 守卫一致） */
 const SUDO_HELPER_PROMPT = `
@@ -85,7 +83,8 @@ export default function (pi: ExtensionAPI) {
 
     const command = event.input["command"];
     if (typeof command !== "string") return;
-    if (!SUDO_PATTERN.test(command)) return;
+    const sudoHit = findCommandSudo(command);
+    if (!sudoHit) return;
 
     // 非 TUI 模式无法弹窗，不干预
     if (!ctx.hasUI) return;
@@ -169,7 +168,8 @@ export default function (pi: ExtensionAPI) {
     // 修改命令：仅第一个 sudo → SUDO_ASKPASS=<script> sudo -A
     // 后续 sudo 不修改，靠第一个 sudo 建立的 timestamp 缓存执行
     // session 记录原始 toolCall（无修改），args 用修改后的值执行
-    const modifiedCommand = command.replace(SUDO_PATTERN, `SUDO_ASKPASS='${scriptPath}' sudo -A`);
+    const inject = `SUDO_ASKPASS='${scriptPath}' sudo -A`;
+    const modifiedCommand = command.slice(0, sudoHit.index) + inject + command.slice(sudoHit.index + "sudo".length);
     event.input["command"] = modifiedCommand;
 
     // 注册清理
