@@ -32,6 +32,17 @@ import { type Component, type Focusable, matchesKey } from "@earendil-works/pi-t
 /** 匹配命令中第一个 sudo（用于检测和单次替换） */
 const SUDO_PATTERN = /\bsudo(?=\s)/;
 
+/** 注入系统提示词的 sudo 说明（仅 TUI，与 hasUI 守卫一致） */
+const SUDO_HELPER_PROMPT = `
+## 🔐 sudo 密码（已配置 sudo-helper）
+
+系统已配置 sudo-helper：bash 命令中的 \`sudo\` 会自动弹出密码输入框，无需你处理密码。
+
+- 直接写 \`sudo <cmd>\` 即可，密码会自动注入
+- 禁止用 \`echo ... | sudo -S\`、手动 askpass、\`sudo -n\` 探测等方式处理 sudo 密码
+- 若命令被阻塞，说明用户取消了密码输入
+`;
+
 /** 临时文件存活上限（兜底清理） */
 const CLEANUP_TIMEOUT_MS = 60_000;
 
@@ -172,6 +183,16 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("tool_result", async (event) => {
     cleanupResources(event.toolCallId);
+  });
+
+  // =========================================================================
+  // before_agent_start: 告知 agent 系统已配置 sudo-helper
+  // =========================================================================
+
+  pi.on("before_agent_start", (event, ctx) => {
+    // 与 tool_call 的 hasUI 守卫一致：无 UI 时 sudo-helper 不工作，不注入
+    if (!ctx.hasUI) return;
+    return { systemPrompt: event.systemPrompt + SUDO_HELPER_PROMPT };
   });
 }
 
