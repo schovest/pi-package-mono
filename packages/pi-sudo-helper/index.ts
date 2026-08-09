@@ -48,8 +48,10 @@ const SUDO_HELPER_PROMPT = `
 - 错误示例：
   - \`sudo bash -c "systemctl restart a && systemctl restart b"\`（外层双引号，$ 会被提前展开）
   - \`sudo systemctl restart a && sudo systemctl restart b\`（一条命令多个裸 sudo）
+  - \`sudo -n true && ...\`（用 sudo -n 探测，见下方禁止项）
+- 禁止用 \`sudo -n\`（如 \`sudo -n true\`）探测 sudo 是否需要密码：不要探测，直接执行 sudo 命令即可，系统会自动弹窗注入密码；\`sudo -n\` 在需要密码时必然失败，探测结果不可靠且浪费一次 bash 调用
+- 禁止用 \`echo ... | sudo -S\`、手动 askpass 等方式处理 sudo 密码
 - 每个 bash 调用需要一次密码输入，多个独立 root 操作优先合并进同一个 \`sudo bash -c\`
-- 禁止用 \`echo ... | sudo -S\`、手动 askpass、\`sudo -n\` 探测等方式处理 sudo 密码
 - 若命令被阻塞，说明用户取消了密码输入
 `;
 
