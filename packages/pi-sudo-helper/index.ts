@@ -20,9 +20,14 @@
  * 6. 提交时：解密 → 写入 cat stdin → 立即清零明文 Buffer
  * 7. 修改命令：仅第一个 sudo → SUDO_ASKPASS=<script> sudo -A
  * 8. bash 工具执行：sudo -A 调用 askpass → cat FIFO → 密码通过管道传递
- * 9. 多个 sudo 场景：AI 按提示词约束生成 `sudo bash -c '...'` 外层包裹，
- *    替换的正是外层 sudo；内层以 root 运行，其 sudo 全部免密，一次认证
- *    即支持任意多个 sudo（不依赖 timestamp）
+ * 9. 多个 sudo 场景：AI 生成 `sudo bash -c '...'` 外层包裹时，被替换的正是
+ *    外层 sudo；内层以 root 运行，其 sudo 全部免密，一次认证即支持任意多个
+ *    sudo（不依赖 timestamp）
+ *
+ * 失败反馈（反应式）：不注入常驻提示词。bash 含 sudo 的命令执行失败且检测到
+ * sudo 结构性问题（多裸 sudo / `sudo -n` 探测 / `sudo bash -c "..."` 双引号包裹）时，
+ * tool_result 把「报错片段 + `sudo bash -c '...'` 格式建议」追加到 agent 可见内容，
+ * AI 下一轮自我纠正；普通命令自身的失败保持静默。
  */
 
 import { spawn } from "node:child_process";
@@ -30,30 +35,7 @@ import { randomFillSync, randomUUID } from "node:crypto";
 import { chmod, unlink, writeFile } from "node:fs/promises";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { type Component, type Focusable, matchesKey } from "@earendil-works/pi-tui";
-import { findCommandSudo } from "./bash-scan.ts";
-
-/** 注入系统提示词的 sudo 说明（仅 TUI，与 hasUI 守卫一致） */
-const SUDO_HELPER_PROMPT = `
-## 🔐 sudo 密码（已配置 sudo-helper）
-
-系统已配置 sudo-helper：bash 命令中的 \`sudo\` 会自动弹出密码输入框，无需你处理密码。
-
-- 单条 bash 命令中最多使用一个 sudo，且命令以 \`sudo\` 开头
-- 一条命令需要多个 root 操作时，整体包裹为：\`sudo bash -c '<整条命令>'\`
-  - 外层必须用单引号：当前 shell 不会提前展开命令内的 $、反引号
-  - 命令内部的字符串参数用双引号（与外层单引号不冲突，echo 内容也在单引号内）
-- 正确示例：
-  - \`sudo bash -c 'systemctl restart a && systemctl restart b'\`
-  - \`sudo bash -c 'echo "重启完成" && systemctl restart a'\`
-- 错误示例：
-  - \`sudo bash -c "systemctl restart a && systemctl restart b"\`（外层双引号，$ 会被提前展开）
-  - \`sudo systemctl restart a && sudo systemctl restart b\`（一条命令多个裸 sudo）
-  - \`sudo -n true && ...\`（用 sudo -n 探测，见下方禁止项）
-- 禁止用 \`sudo -n\`（如 \`sudo -n true\`）探测 sudo 是否需要密码：不要探测，直接执行 sudo 命令即可，系统会自动弹窗注入密码；\`sudo -n\` 在需要密码时必然失败，探测结果不可靠且浪费一次 bash 调用
-- 禁止用 \`echo ... | sudo -S\`、手动 askpass 等方式处理 sudo 密码
-- 每个 bash 调用需要一次密码输入，多个独立 root 操作优先合并进同一个 \`sudo bash -c\`
-- 若命令被阻塞，说明用户取消了密码输入
-`;
+import { classifySudoUsage, findAllCommandSudo } from "./bash-scan.ts";
 
 /** 临时文件存活上限（兜底清理） */
 const CLEANUP_TIMEOUT_MS = 60_000;
@@ -71,6 +53,9 @@ interface SudoResources {
 export default function (pi: ExtensionAPI) {
   /** toolCallId → 待清理资源 */
   const pending = new Map<string, SudoResources>();
+
+  /** toolCallId → 原始 bash 命令（反应式失败提示用；tool_result 事件拿到的是改写后的命令） */
+  const callCtx = new Map<string, { command: string }>();
 
   /** 清理 sudo 临时资源 */
   function cleanupResources(toolCallId: string): void {
@@ -97,11 +82,14 @@ export default function (pi: ExtensionAPI) {
 
     const command = event.input["command"];
     if (typeof command !== "string") return;
-    const sudoHit = findCommandSudo(command);
-    if (!sudoHit) return;
+    const sudoHits = findAllCommandSudo(command);
+    if (sudoHits.length === 0) return;
 
     // 非 TUI 模式无法弹窗，不干预
     if (!ctx.hasUI) return;
+
+    // 记录原始命令供失败后反应式提示（tool_result 事件里的 command 已被改写）
+    callCtx.set(event.toolCallId, { command });
 
     // 预检：sudo timestamp 是否有效（不需要密码）
     try {
@@ -168,6 +156,8 @@ export default function (pi: ExtensionAPI) {
       }
       await unlink(fifoPath).catch(() => {});
       await unlink(scriptPath).catch(() => {});
+      // 用户主动取消：不给失败反应式提示（block reason 已足够）
+      callCtx.delete(event.toolCallId);
       return { block: true, reason: "用户取消了 sudo 密码输入" };
     }
 
@@ -180,12 +170,13 @@ export default function (pi: ExtensionAPI) {
     }
 
     // 修改命令：仅第一个 sudo → SUDO_ASKPASS=<script> sudo -A
-    // 多个 sudo 场景：AI 按系统提示词约束生成 `sudo bash -c '...'` 形态，
-    // 被替换的正是外层 sudo；内层命令以 root 运行，其所有 sudo 因调用者
-    // 是 root 而免密（sudoers: invoking user 为 root 时不要求密码）
-    // session 记录原始 toolCall（无修改），args 用修改后的值执行
+    // 多个 sudo 场景：AI 若生成 `sudo bash -c '...'` 外层包裹，被替换的正是
+    // 外层 sudo；内层命令以 root 运行，其所有 sudo 因调用者是 root 而免密
+    // （sudoers: invoking user 为 root 时不要求密码）。未按格式生成的，失败时
+    // 由 tool_result 反应式提示纠正。session 记录原始 toolCall（无修改）
     const inject = `SUDO_ASKPASS='${scriptPath}' sudo -A`;
-    const modifiedCommand = command.slice(0, sudoHit.index) + inject + command.slice(sudoHit.index + "sudo".length);
+    const modifiedCommand =
+      command.slice(0, sudoHits[0].index) + inject + command.slice(sudoHits[0].index + "sudo".length);
     event.input["command"] = modifiedCommand;
 
     // 注册清理
@@ -194,22 +185,121 @@ export default function (pi: ExtensionAPI) {
   });
 
   // =========================================================================
-  // tool_result: 清理临时资源
+  // tool_result: 失败时反应式附加 sudo 提示；同时清理临时资源
   // =========================================================================
 
   pi.on("tool_result", async (event) => {
+    // 反应式提示：bash 失败且该调用记录过 sudo 原始命令
+    const info = event.toolName === "bash" ? callCtx.get(event.toolCallId) : undefined;
+    let hint: string | undefined;
+    if (event.isError && info) {
+      hint = buildSudoHint(info, event.content);
+    }
+    // 无论是否提示，清理注入资源 + 反应式缓存
     cleanupResources(event.toolCallId);
+    callCtx.delete(event.toolCallId);
+    if (hint) {
+      return { content: [...event.content, { type: "text", text: hint }] };
+    }
   });
+}
 
-  // =========================================================================
-  // before_agent_start: 告知 agent 系统已配置 sudo-helper
-  // =========================================================================
+// =============================================================================
+// 反应式失败提示
+// =============================================================================
 
-  pi.on("before_agent_start", (event, ctx) => {
-    // 与 tool_call 的 hasUI 守卫一致：无 UI 时 sudo-helper 不工作，不注入
-    if (!ctx.hasUI) return;
-    return { systemPrompt: event.systemPrompt + SUDO_HELPER_PROMPT };
-  });
+/** sudo 认证/权限类失败特征（输出中出现即视为 sudo 层问题；含 zh_CN 本地化报错） */
+const SUDO_ERROR_SIGNATURES = [
+  "a password is required",
+  "Sorry, try again",
+  "not in the sudoers file",
+  "Authentication token manipulation error",
+  "incorrect password",
+  "no valid sudoers sources found",
+  // zh_CN locale 下 sudo 的本地化报错
+  "需要密码",
+  "不在 sudoers",
+  "请重试",
+  "密码不正确",
+  "令牌",
+] as const;
+
+/** 取报错行及其后至多 2 行（trim + 去空行，有界 ≤5 行） */
+function snippetAround(lines: string[], start: number): string {
+  return lines
+    .slice(Math.max(0, start), start + 3)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .slice(0, 5)
+    .join("\n");
+}
+
+/**
+ * 从 bash 失败输出提取「疑似 sudo 相关报错」片段（有界，≤5 行）。
+ * 三级定位：
+ * 1. 已知认证特征行（英文 + 中文签名）
+ * 2. 含 `sudo` 的行（`sudo: ` / `sudo：` 前缀中英文一致，语言无关兜底）
+ * 3. 输出尾部（去掉末尾 "Command exited with code N"）的非空行
+ */
+function extractErrorSnippet(output: string): string | undefined {
+  if (!output) return undefined;
+  const lines = output.split("\n");
+  const sigLine = lines.findIndex((l) => SUDO_ERROR_SIGNATURES.some((s) => l.toLowerCase().includes(s)));
+  if (sigLine !== -1) return snippetAround(lines, sigLine);
+  const sudoLine = lines.findIndex((l) => l.toLowerCase().includes("sudo"));
+  if (sudoLine !== -1) return snippetAround(lines, sudoLine);
+  const body = output
+    .replace(/\n*Command exited with code \d+\s*$/, "")
+    .split("\n")
+    .filter((l) => l.trim().length > 0);
+  if (body.length > 0) return body.slice(-3).join("\n");
+  return undefined;
+}
+
+/**
+ * 生成反应式失败提示：**门控**——仅当检测到 sudo 结构性问题（多裸 sudo /
+ * `sudo -n` 探测 / `sudo bash -c "..."` 双引号包裹）时才返回提示；普通命令
+ * 自身失败（含 sudo 认证类报错但格式合规）静默，不追加噪音。
+ * 提示内容：定位报错片段 + 按结构选择话术，核心是教育
+ * `sudo bash -c '<整条命令>'`（外层单引号）格式。
+ */
+function buildSudoHint(
+  info: { command: string },
+  content: ReadonlyArray<{ type: string; text?: unknown }>,
+): string | undefined {
+  const output = content
+    .filter((c) => c.type === "text")
+    .map((c) => (typeof c.text === "string" ? c.text : ""))
+    .join("\n");
+  const flags = classifySudoUsage(info.command, findAllCommandSudo(info.command));
+
+  const problems: string[] = [];
+  if (flags.multiSudo) {
+    problems.push(
+      "一条命令里出现了多个 sudo → 合并成一条 `sudo bash -c '<整条命令>'`（外层单引号，命令内部字符串用双引号）",
+    );
+  }
+  if (flags.nonInteractive) {
+    problems.push("命令用了 `sudo -n` 探测 → 不需探测：直接 `sudo ...` 即可，helper 会自动弹窗注入密码");
+  }
+  if (flags.bashDashCDoubleQuote) {
+    problems.push('`sudo bash -c "..."` 用了外层双引号 → 改外层单引号，防止外层 shell 提前展开 $、反引号');
+  }
+  // 门控：无结构问题 → 静默
+  if (problems.length === 0) return undefined;
+
+  const snippet = extractErrorSnippet(output);
+  const lines = ["🔐 sudo-helper：检测到 sudo 命令执行失败。", ""];
+  if (snippet) {
+    lines.push("- 失败片段：");
+    for (const l of snippet.split("\n")) lines.push(`  ${l}`);
+    lines.push("");
+  }
+  lines.push(`- 原始命令：${info.command}`);
+  lines.push("");
+  lines.push("- 原因与建议：");
+  lines.push(problems.map((p) => `  · ${p}`).join("\n"));
+  return lines.join("\n");
 }
 
 // =============================================================================

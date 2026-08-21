@@ -31,6 +31,24 @@ export function findCommandSudo(command: string): CommandSudoHit | null {
 }
 
 /**
+ * 定位所有命令起始位置的 sudo（按出现顺序）。
+ * 用于多 sudo 结构检测：`sudo a && sudo b` → 2 处命中；引号/注释/heredoc 文本
+ * 里的 sudo 与 findCommandSudo 同一套词法规则，不重复计数。
+ * 实现：复用 scan 从上次命中点之后重新扫描（命中点后必为空白，从命令边界重启）。
+ */
+export function findAllCommandSudo(command: string): CommandSudoHit[] {
+  const hits: CommandSudoHit[] = [];
+  let pos = 0;
+  for (;;) {
+    const res = scan(command, pos, null);
+    if (!res.hit) break;
+    hits.push(res.hit);
+    pos = res.hit.index + "sudo".length;
+  }
+  return hits;
+}
+
+/**
  * 递归扫描 [start, n)，遇 stop 字符停止（子命令上下文用）。
  * 返回消费到的位置（stop 之后）与命中结果（如有）。
  */
@@ -267,4 +285,59 @@ function collectWord(command: string, i: number): number {
     i++;
   }
   return i;
+}
+
+// =============================================================================
+// sudo 使用结构标记 —— 反应式失败提示的判据（多裸 sudo / -n 探测 / 双引号包裹）
+// =============================================================================
+
+const SUDO_LEN = "sudo".length;
+
+/** 取某个 sudo 命中点后的空白分隔 token（至多 limit 个，用于选项阶段判定） */
+function tokensAfter(command: string, index: number, limit: number): string[] {
+  return command
+    .slice(index + SUDO_LEN)
+    .split(/\s+/)
+    .filter((t) => t.length > 0)
+    .slice(0, limit);
+}
+
+/** sudo 使用结构标记，供失败后的反应式提示选择话术 */
+export interface SudoUsageFlags {
+  /** 一条命令出现多处命令位置 sudo（suggest 合并成 sudo bash -c '...'） */
+  multiSudo: boolean;
+  /** 用了 sudo -n 探测（需要密码时必失败，无需探测） */
+  nonInteractive: boolean;
+  /** sudo bash -c "..." 外层双引号包裹（$ 会被外层 shell 提前展开） */
+  bashDashCDoubleQuote: boolean;
+}
+
+/**
+ * 依据全部命令位置 sudo 命中点归类使用结构。
+ * - multiSudo：命中 ≥2 处。
+ * - nonInteractive：某个 sudo 后、仍处于选项阶段（token 以 - 开头）时遇到
+ *   去前缀后以 n 开头的选项（`-n`、`-nX`、`--non-interactive`）；首个非选项
+ *   token（= 实际命令）出现即选项阶段结束，避免 `apt ... -n` 误判。
+ * - bashDashCDoubleQuote：`sudo bash -c "..."` / `sudo env bash -c "..."` 形态。
+ */
+export function classifySudoUsage(command: string, hits: CommandSudoHit[]): SudoUsageFlags {
+  const flags: SudoUsageFlags = {
+    multiSudo: hits.length >= 2,
+    nonInteractive: false,
+    bashDashCDoubleQuote: false,
+  };
+  for (const hit of hits) {
+    for (const tok of tokensAfter(command, hit.index, 6)) {
+      if (!tok.startsWith("-")) break; // 首个非选项 token = 命令，选项阶段结束
+      if (tok.replace(/^-+/, "").startsWith("n")) {
+        flags.nonInteractive = true;
+        break;
+      }
+    }
+    const rest = command.slice(hit.index + SUDO_LEN).trimStart();
+    if (/^bash(?: -[A-Za-z]+)* -c\s*"/.test(rest) || /^env\s+bash(?: -[A-Za-z]+)* -c\s*"/.test(rest)) {
+      flags.bashDashCDoubleQuote = true;
+    }
+  }
+  return flags;
 }

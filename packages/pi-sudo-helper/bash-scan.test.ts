@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findCommandSudo } from "./bash-scan.ts";
+import { classifySudoUsage, findAllCommandSudo, findCommandSudo } from "./bash-scan.ts";
 
 describe("findCommandSudo — 命令起始位置的 sudo 命中", () => {
   it("命令开头", () => {
@@ -110,5 +110,71 @@ describe("findCommandSudo — 子命令替换中的 sudo 命中（真实执行�
 
   it("反引号命令替换", () => {
     expect(findCommandSudo("echo `sudo -n true`")).toEqual({ index: 6 });
+  });
+});
+
+describe("findAllCommandSudo — 所有命令位置 sudo", () => {
+  it("无 sudo", () => {
+    expect(findAllCommandSudo("echo hi")).toEqual([]);
+  });
+
+  it("单个 sudo", () => {
+    expect(findAllCommandSudo("sudo apt update")).toEqual([{ index: 0 }]);
+  });
+
+  it("多个裸 sudo（&& 分隔）", () => {
+    expect(findAllCommandSudo("sudo a && sudo b")).toHaveLength(2);
+    expect(findAllCommandSudo("sudo a && sudo b")[0]).toEqual({ index: 0 });
+  });
+
+  it("管道分隔多个", () => {
+    expect(findAllCommandSudo("sudo a | sudo b | sudo c")).toHaveLength(3);
+  });
+
+  it("引号/文本内 sudo 不重复计数", () => {
+    const cmd = 'echo "sudo x"; sudo y';
+    expect(findAllCommandSudo(cmd)).toEqual([{ index: cmd.lastIndexOf("sudo y") }]);
+  });
+
+  it("heredoc 内容不计入多个 sudo", () => {
+    const cmd = "sudo cat <<EOF\nsudo fake\nEOF\nsudo real";
+    expect(findAllCommandSudo(cmd)).toHaveLength(2);
+  });
+});
+
+describe("classifySudoUsage — 使用结构标记", () => {
+  it("单个 sudo 无标记", () => {
+    const cmd = "sudo apt update";
+    expect(classifySudoUsage(cmd, findAllCommandSudo(cmd))).toEqual({
+      multiSudo: false,
+      nonInteractive: false,
+      bashDashCDoubleQuote: false,
+    });
+  });
+
+  it("多裸 sudo → multiSudo", () => {
+    const cmd = "sudo a && sudo b";
+    expect(classifySudoUsage(cmd, findAllCommandSudo(cmd)).multiSudo).toBe(true);
+  });
+
+  it("sudo -n / --non-interactive → nonInteractive", () => {
+    for (const cmd of ["sudo -n true", "sudo -n apt update", "sudo --non-interactive apt update"]) {
+      expect(classifySudoUsage(cmd, findAllCommandSudo(cmd)).nonInteractive).toBe(true);
+    }
+  });
+
+  it("apt 自身 -n 选项不误判 nonInteractive", () => {
+    const cmd = "sudo apt install -n foo";
+    expect(classifySudoUsage(cmd, findAllCommandSudo(cmd)).nonInteractive).toBe(false);
+  });
+
+  it('sudo bash -c "..." 双引号包裹 → bashDashCDoubleQuote', () => {
+    const cmd = 'sudo bash -c "systemctl restart a"';
+    expect(classifySudoUsage(cmd, findAllCommandSudo(cmd)).bashDashCDoubleQuote).toBe(true);
+  });
+
+  it("sudo bash -c '...' 单引号不标记", () => {
+    const cmd = "sudo bash -c 'systemctl restart a'";
+    expect(classifySudoUsage(cmd, findAllCommandSudo(cmd)).bashDashCDoubleQuote).toBe(false);
   });
 });
