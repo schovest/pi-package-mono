@@ -939,8 +939,8 @@ describe("setupBackgroundReview", () => {
       currentProject: "project convention",
     });
 
-    assert.match(prompt, /project-specific facts.*target "project"/i);
-    assert.match(prompt, /global or cross-project facts.*target "memory"/i);
+    assert.match(prompt, /default\s*: use target "project"/i);
+    assert.match(prompt, /target "memory" \(global\).*explicitly asked to store globally/i);
     assert.match(prompt, /failures, corrections.*target "failure"/i);
   });
 

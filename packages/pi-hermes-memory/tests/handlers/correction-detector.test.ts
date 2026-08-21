@@ -577,7 +577,7 @@ describe("setupCorrectionDetector handler", () => {
       await fireTurnEnd(correctionBranch());
 
       const options = directCalls[0][3] as { systemPrompt: string; userPrompt: string };
-      assert.match(options.systemPrompt, /project-specific facts.*target "project"/i);
+      assert.match(options.systemPrompt, /default\s*: use target "project"/i);
       assert.match(options.systemPrompt, /failures, corrections.*target "failure"/i);
       assert.match(options.userPrompt, /--- Current Project Memory ---/);
     });

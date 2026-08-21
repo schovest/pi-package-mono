@@ -65,6 +65,8 @@ Memory write targets:
 - project: project-specific conventions, architecture decisions, commands, package manager choices, and repo workflows.
 - failure: failures, corrections, insights, conventions, preferences, and tool quirks captured as categorized lessons.
 
+Write routing: when a project is active, prefer target "project" for project-related facts; use "memory" only for cross-project facts or when the user explicitly asks for global memory.
+
 memory_search filters:
 - target accepts "memory", "user", or "failure".
 - project filters project-scoped memories by project name.
@@ -113,7 +115,7 @@ Persistent memory is available through memory tools. Do not assume memory has al
 
 Use memory_search when the current task may depend on durable context from previous sessions: user preferences, project conventions, prior decisions, known failures, corrections, insights, or tool quirks.
 
-Memory write targets: user for preferences/profile; memory for global notes and environment/tool facts; project for repo-specific conventions and workflows; failure for categorized lessons.
+Memory write targets: user for preferences/profile; memory for global notes and environment/tool facts; project for repo-specific conventions and workflows; failure for categorized lessons. When a project is active, default project-related facts to target "project"; use "memory" only for cross-project facts or explicit requests for global memory.
 
 memory_search filters: target searches user/global/failure memories; project filters project-scoped memories; category filters categorized failure/lesson memories only.
 
@@ -163,14 +165,18 @@ TOOLS:
 // Keep the routing rule in one place so direct and subprocess transports do
 // not silently disagree about where a durable fact belongs.
 export function buildMemoryTargetRoutingGuidance(hasProjectStore: boolean): string {
-  const projectRule = hasProjectStore
-    ? '- Project-specific facts, conventions, and workflows: use target "project" (the current project memory section is available).'
-    : '- No current project memory section is available: do not emit target "project"; use target "memory" for non-user, non-failure facts.';
+  let routing: string;
+  if (hasProjectStore) {
+    routing = `
+- Default: use target "project" (the current project memory section is available). Project-specific facts, conventions, workflows, and tool quirks belong here.
+- Use target "memory" (global) only for facts the user explicitly asked to store globally, or clearly cross-project environment/tool facts that matter beyond this project.`;
+  } else {
+    routing = `
+- No current project memory section is available: do not emit target "project"; use target "memory" for non-user, non-failure facts.`;
+  }
 
   return `**Target routing**:
-- User identity, preferences, and profile facts: use target "user".
-- Global or cross-project facts: use target "memory".
-${projectRule}
+- User identity, preferences, and profile facts: use target "user".${routing}
 - Failures, corrections, insights, and tool quirks: use target "failure" (keep these categorized as failure memories; do not reroute them to project or global memory).`;
 }
 

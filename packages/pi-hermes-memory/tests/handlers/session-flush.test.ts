@@ -567,7 +567,7 @@ describe("direct transport", () => {
     await emit(mockPi.handlers, "session_before_compact", { signal: undefined }, defaultFlushCtx());
 
     const options = directCalls[0][3] as { systemPrompt: string; userPrompt: string };
-    assert.match(options.systemPrompt, /project-specific facts.*target "project"/i);
+    assert.match(options.systemPrompt, /default\s*: use target "project"/i);
     assert.match(options.userPrompt, /--- Current Project Memory ---/);
   });
 
