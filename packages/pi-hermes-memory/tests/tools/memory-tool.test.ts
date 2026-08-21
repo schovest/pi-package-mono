@@ -462,6 +462,95 @@ describe("registerMemoryTool", () => {
     assert.strictEqual(results[0].content, "Project entry");
   });
 
+  it("defaults omitted target to project memory when a project is active", async () => {
+    let capturedResult: any;
+    const mockPi = {
+      registerTool: (def: any) => {
+        if (!capturedResult || def.name === "memory_add") capturedResult = def;
+      },
+    } as unknown as ExtensionAPI;
+
+    const addTargets: string[] = [];
+    const mockGlobalStore = {
+      add: (target: string, content: string) => {
+        addTargets.push(`global:${target}:${content}`);
+        return { success: true, entries: [], usage: "1%", entry_count: 0, message: "Entry added." };
+      },
+    } as unknown as MemoryStore;
+    const mockProjectStore = {
+      add: (target: string, content: string) => {
+        addTargets.push(`project:${target}:${content}`);
+        return {
+          success: true,
+          target,
+          entries: [content],
+          usage: "2% — 20/5000 chars",
+          entry_count: 1,
+          message: "Entry added.",
+        };
+      },
+    } as unknown as MemoryStore;
+
+    registerMemoryTool(mockPi, mockGlobalStore, mockProjectStore, dbManager, "project-a");
+    const result = await capturedResult.execute(
+      "tc-1",
+      { content: "Project-level fact" },
+      undefined as any,
+      undefined as any,
+      undefined as any,
+    );
+
+    assert.deepStrictEqual(
+      addTargets,
+      ["project:memory:Project-level fact"],
+      "omitted target must go to the project store",
+    );
+    assert.strictEqual(result.details.target, "project");
+    const projectRows = getMemories(dbManager, { project: "project-a", target: "memory" });
+    assert.deepStrictEqual(
+      projectRows.map((row) => row.content),
+      ["Project-level fact"],
+    );
+  });
+
+  it("defaults omitted target to global memory without a project", async () => {
+    let capturedResult: any;
+    const mockPi = {
+      registerTool: (def: any) => {
+        if (!capturedResult || def.name === "memory_add") capturedResult = def;
+      },
+    } as unknown as ExtensionAPI;
+
+    const addTargets: string[] = [];
+    const mockGlobalStore = {
+      add: (target: string, content: string) => {
+        addTargets.push(`${target}:${content}`);
+        return { success: true, entries: [], usage: "1%", entry_count: 0, message: "Entry added." };
+      },
+    } as unknown as MemoryStore;
+
+    registerMemoryTool(mockPi, mockGlobalStore, null, dbManager);
+    const result = await capturedResult.execute(
+      "tc-1",
+      { content: "Global fact" },
+      undefined as any,
+      undefined as any,
+      undefined as any,
+    );
+
+    assert.deepStrictEqual(
+      addTargets,
+      ["memory:Global fact"],
+      "omitted target must go to the global store without a project",
+    );
+    assert.notStrictEqual(result.details.target, "project");
+    const globalRows = getMemories(dbManager, { project: null, target: "memory" });
+    assert.deepStrictEqual(
+      globalRows.map((row) => row.content),
+      ["Global fact"],
+    );
+  });
+
   it("resolves the active project store and name for each mutation", async () => {
     let capturedResult: any;
     const mockPi = {
@@ -676,6 +765,11 @@ describe("registerMemoryTool", () => {
         content: "durable fact",
       }),
       true,
+    );
+    assert.strictEqual(
+      Value.Check(registeredTools.memory_add.parameters, { content: "durable fact" }),
+      true,
+      "add without target must pass schema validation (defaults to project/global memory)",
     );
     assert.strictEqual(
       Value.Check(registeredTools.memory_replace.parameters, {

@@ -260,7 +260,7 @@ async function reconcileStoreScope(
 type MemoryAction = "add" | "replace" | "remove";
 
 type MemoryToolParams = {
-  target: "memory" | "user" | "project" | "failure";
+  target?: "memory" | "user" | "project" | "failure";
   content?: string;
   old_text?: string;
   category?: MemoryCategory;
@@ -302,12 +302,14 @@ export function registerMemoryTool(
 
   const executeAction = async (action: MemoryAction, params: MemoryToolParams, signal?: AbortSignal) => {
     const { target: rawTarget, content, old_text, category, failure_reason } = params;
-    const target = rawTarget === "project" ? "memory" : rawTarget;
     const activeProjectStore = resolveProjectStore(projectStore);
     const activeProjectName = resolveProjectName(projectName);
-    const activeStore = rawTarget === "project" ? activeProjectStore : store;
+    // 未显式指定 target 时：活动项目存在 → 存项目级记忆；否则 → 全局记忆。
+    const resolvedRawTarget = rawTarget ?? (activeProjectStore ? "project" : "memory");
+    const target = resolvedRawTarget === "project" ? "memory" : resolvedRawTarget;
+    const activeStore = resolvedRawTarget === "project" ? activeProjectStore : store;
 
-    if (rawTarget === "project" && !activeProjectStore) {
+    if (resolvedRawTarget === "project" && !activeProjectStore) {
       return {
         content: [
           {
@@ -336,7 +338,7 @@ export function registerMemoryTool(
         if (!content) {
           throw new Error("Content is required for 'add' action.");
         }
-        if (rawTarget === "failure") {
+        if (resolvedRawTarget === "failure") {
           const memoryCategory = category ?? "failure";
           result = await store_.addFailure(content, {
             category: memoryCategory,
@@ -344,7 +346,7 @@ export function registerMemoryTool(
           });
           if (result.success && !syncHandled) {
             syncWarning = await syncAddToSqlite(
-              rawTarget,
+              resolvedRawTarget,
               content,
               memoryCategory,
               failure_reason,
@@ -355,8 +357,15 @@ export function registerMemoryTool(
         } else {
           result = await store_.add(target, content, signal);
           if (result.success && !syncHandled) {
-            await syncEvictionsFromSqlite(rawTarget, result.evicted_entries, dbManager, activeProjectName);
-            syncWarning = await syncAddToSqlite(rawTarget, content, undefined, undefined, dbManager, activeProjectName);
+            await syncEvictionsFromSqlite(resolvedRawTarget, result.evicted_entries, dbManager, activeProjectName);
+            syncWarning = await syncAddToSqlite(
+              resolvedRawTarget,
+              content,
+              undefined,
+              undefined,
+              dbManager,
+              activeProjectName,
+            );
           }
         }
         break;
@@ -365,26 +374,26 @@ export function registerMemoryTool(
         if (!content) throw new Error("content is required for 'replace' action.");
         result = await store_.replace(target, old_text, content);
         if (result.success && !syncHandled) {
-          syncWarning = await syncReplaceToSqlite(rawTarget, old_text, content, dbManager, activeProjectName);
+          syncWarning = await syncReplaceToSqlite(resolvedRawTarget, old_text, content, dbManager, activeProjectName);
         }
         break;
       case "remove":
         if (!old_text) throw new Error("old_text is required for 'remove' action.");
         result = await store_.remove(target, old_text);
         if (result.success && !syncHandled) {
-          syncWarning = await syncRemoveFromSqlite(rawTarget, old_text, dbManager, activeProjectName);
+          syncWarning = await syncRemoveFromSqlite(resolvedRawTarget, old_text, dbManager, activeProjectName);
         }
         break;
     }
 
     if (action !== "add" && old_text) {
-      result = addWrongTargetHint(result, rawTarget, old_text, store, activeProjectStore);
+      result = addWrongTargetHint(result, resolvedRawTarget, old_text, store, activeProjectStore);
     }
 
     if (result.success && !syncHandled && typeof store_.getRawEntriesForSync === "function") {
       const reconciliationWarning = await reconcileStoreScope(
         store_.getRawEntriesForSync(target),
-        rawTarget,
+        resolvedRawTarget,
         dbManager,
         activeProjectName,
       );
@@ -392,7 +401,7 @@ export function registerMemoryTool(
     }
 
     if (syncWarning && result.success) result = appendSyncWarning(result, syncWarning);
-    if (rawTarget === "project" && result.success) result = { ...result, target: "project" };
+    if (resolvedRawTarget === "project" && result.success) result = { ...result, target: "project" };
 
     return {
       content: [{ type: "text" as const, text: formatMemoryToolText(result) }],
@@ -441,9 +450,9 @@ This action-specific tool accepts only the parameters listed in its schema.`;
     "Memory Add",
     `${commonDescription}
 
-Add one durable entry. The target and content fields are required.`,
+Add one durable entry. Content is required. When target is omitted, the entry is saved to project memory when a project is active, otherwise to global memory.`,
     Type.Object({
-      target,
+      target: Type.Optional(target),
       content: Type.String({ description: "Entry content to save." }),
       category: Type.Optional(category),
       failure_reason: Type.Optional(Type.String({ description: "Why a failure occurred." })),
