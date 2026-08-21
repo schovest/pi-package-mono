@@ -177,6 +177,70 @@ describe("provider auth resolution", () => {
   });
 });
 
+describe("parse_error retry", () => {
+  function registryWithKey() {
+    return {
+      getApiKeyAndHeaders: async () => ({ ok: true as const, apiKey: "key" }),
+      getAll: () => [mockModel(false)],
+      getAvailable: () => [mockModel(false)],
+    };
+  }
+
+  const proseResponse = {
+    stopReason: "stop",
+    content: [{ type: "text", text: "收到，当前没有需要保存的内容。" }],
+  };
+
+  function run(opts: { first: unknown; rest?: unknown }) {
+    let attempts = 0;
+    const complete = async () => {
+      attempts++;
+      return attempts === 1 ? opts.first : (opts.rest ?? opts.first);
+    };
+    const result = runDirectMemoryCompletion(
+      { model: mockModel(false), modelRegistry: registryWithKey() } as never,
+      null as never,
+      null,
+      { userPrompt: "u", systemPrompt: "s", config: {} },
+      null,
+      null,
+      { completeSimple: complete as never },
+    );
+    return { result, attempts: () => attempts };
+  }
+
+  it("retries once when the first response is prose instead of JSON", async () => {
+    const json = {
+      stopReason: "stop",
+      content: [{ type: "text", text: JSON.stringify({ operations: [] }) }],
+    };
+    const { result, attempts } = run({ first: proseResponse, rest: json });
+
+    assert.strictEqual((await result).ok, true);
+    assert.strictEqual(attempts(), 2, "prose reply should be retried exactly once");
+  });
+
+  it("still reports parse_error when the retry also returns prose", async () => {
+    const { result, attempts } = run({ first: proseResponse });
+
+    const outcome = await result;
+    assert.strictEqual(outcome.ok, false);
+    assert.strictEqual(outcome.fallbackReason, "parse_error");
+    assert.strictEqual(attempts(), 2, "exactly one retry before giving up");
+  });
+
+  it("does not retry when the first response parses", async () => {
+    const json = {
+      stopReason: "stop",
+      content: [{ type: "text", text: JSON.stringify({ operations: [] }) }],
+    };
+    const { result, attempts } = run({ first: json });
+
+    assert.strictEqual((await result).ok, true);
+    assert.strictEqual(attempts(), 1, "valid JSON should not be retried");
+  });
+});
+
 describe("parseReviewOperations", () => {
   it("parses valid JSON operations", () => {
     const parsed = parseReviewOperations(

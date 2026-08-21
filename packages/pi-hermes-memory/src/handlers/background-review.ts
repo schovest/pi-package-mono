@@ -8,7 +8,12 @@
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { COMBINED_REVIEW_PROMPT, DIRECT_REVIEW_SYSTEM_PROMPT, buildMemoryTargetRoutingGuidance } from "../constants.js";
+import {
+  COMBINED_REVIEW_PROMPT,
+  DEFAULT_REVIEW_TIMEOUT_MS,
+  DIRECT_REVIEW_SYSTEM_PROMPT,
+  buildMemoryTargetRoutingGuidance,
+} from "../constants.js";
 import type { DatabaseManager } from "../store/db.js";
 import type { MemoryStore } from "../store/memory-store.js";
 import type { MemoryConfig } from "../types.js";
@@ -109,7 +114,7 @@ async function runSubprocessReview(
     cwd: ctx.cwd,
     model: resolveChildPiModel(ctx.model),
     signal: ctx.signal,
-    timeoutMs: 120000,
+    timeoutMs: config.reviewTimeoutMs ?? DEFAULT_REVIEW_TIMEOUT_MS,
   });
 }
 
@@ -223,7 +228,7 @@ export function setupBackgroundReview(
                 buildMemoryTargetRoutingGuidance(activeProjectStore !== null),
               ].join("\n"),
               config,
-              timeoutMs: 120000,
+              timeoutMs: config.reviewTimeoutMs ?? DEFAULT_REVIEW_TIMEOUT_MS,
             },
             dbManager,
             activeProjectName,

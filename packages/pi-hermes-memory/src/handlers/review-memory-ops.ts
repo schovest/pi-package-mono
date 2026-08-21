@@ -445,38 +445,48 @@ export async function runDirectMemoryCompletion(
   const request = { systemPrompt: options.systemPrompt, messages: [userMessage] };
 
   try {
-    let response;
-    try {
-      response = await complete(
-        model,
-        request,
-        buildDirectReviewCompletionOptions(model, requestAuth, thinking, controller.signal),
-      );
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (controller.signal.aborted || !isAuthRejection(message)) throw err;
+    const attemptCompletion = async () => {
+      try {
+        return await complete(
+          model,
+          request,
+          buildDirectReviewCompletionOptions(model, requestAuth, thinking, controller.signal),
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (controller.signal.aborted || !isAuthRejection(message)) throw err;
 
-      // The provider rejected the key mid-flight. A rotation tool may have
-      // re-resolve through Pi and retry once only if it returns a different
-      // key; otherwise this is a real auth problem and the subprocess
-      // fallback should handle it (#139).
-      const rotated = await resolveRequestAuth(ctx.modelRegistry, model);
-      if (!rotated.ok || !rotated.apiKey || rotated.apiKey === requestAuth.apiKey) throw err;
+        // The provider rejected the key mid-flight. A rotation tool may have
+        // re-resolve through Pi and retry once only if it returns a different
+        // key; otherwise this is a real auth problem and the subprocess
+        // fallback should handle it (#139).
+        const rotated = await resolveRequestAuth(ctx.modelRegistry, model);
+        if (!rotated.ok || !rotated.apiKey || rotated.apiKey === requestAuth.apiKey) throw err;
 
-      requestAuth = { apiKey: rotated.apiKey, headers: rotated.headers, env: rotated.env };
-      response = await complete(
-        model,
-        request,
-        buildDirectReviewCompletionOptions(model, requestAuth, thinking, controller.signal),
-      );
-    }
+        requestAuth = { apiKey: rotated.apiKey, headers: rotated.headers, env: rotated.env };
+        return complete(
+          model,
+          request,
+          buildDirectReviewCompletionOptions(model, requestAuth, thinking, controller.signal),
+        );
+      }
+    };
 
+    let response = await attemptCompletion();
     if (response.stopReason === "aborted") {
       return { ok: false, appliedCount: 0, fallbackReason: "aborted" };
     }
 
-    const text = responseText(response.content);
-    const operations = parseReviewOperations(text);
+    let text = responseText(response.content);
+    let operations = parseReviewOperations(text);
+    if (operations === null && !controller.signal.aborted) {
+      // Models occasionally answer in prose instead of the required JSON.
+      // Retry once within the same budget before reporting parse_error and
+      // falling back to the subprocess transport.
+      response = await attemptCompletion();
+      text = responseText(response.content);
+      operations = parseReviewOperations(text);
+    }
     if (operations === null) {
       return { ok: false, appliedCount: 0, fallbackReason: "parse_error" };
     }

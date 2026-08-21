@@ -790,6 +790,31 @@ describe("setupBackgroundReview", () => {
     assert.ok(reviewNotify, "should notify when direct review applies memory");
   });
 
+  it("passes the configured review timeout to the direct transport", async () => {
+    const pi = createMockPi();
+    setupWithDirectDeps(
+      pi,
+      { ok: true, appliedCount: 0, fallbackReason: "empty" },
+      {
+        ...defaultConfig,
+        reviewTransport: "direct",
+        reviewTimeoutMs: 90000,
+      },
+    );
+
+    fireMessageEnd("user");
+    fireMessageEnd("user");
+    fireMessageEnd("user");
+    for (let i = 0; i < 10; i++) {
+      fireTurnEnd();
+    }
+    await reviewSettledSignal.promise;
+
+    assert.strictEqual(directCalls.length, 1, "direct review should run once");
+    const directOptions = directCalls[0][3] as { timeoutMs: number };
+    assert.strictEqual(directOptions.timeoutMs, 90000, "direct budget should follow reviewTimeoutMs");
+  });
+
   it("falls back to subprocess when direct review cannot run", async () => {
     const pi = createMockPi();
     setupWithDirectDeps(
@@ -846,8 +871,27 @@ describe("setupBackgroundReview", () => {
     ]);
     assert.deepStrictEqual(execCalls[0][2], {
       cwd: "/tmp/local-session",
-      timeout: 125000,
+      timeout: 245000,
     });
+  });
+
+  it("uses the configured reviewTimeoutMs for the subprocess budget", async () => {
+    const pi = createMockPi();
+    setup(pi, { ...defaultConfig, reviewTimeoutMs: 60000 });
+
+    fireMessageEnd("user");
+    fireMessageEnd("user");
+    fireMessageEnd("user");
+    for (let i = 0; i < 10; i++) {
+      fireTurnEnd(makeBranch(10), { cwd: "/tmp/local-session" });
+    }
+    await reviewSettledSignal.promise;
+
+    const [command, childArgs, options] = execCalls[0];
+    const underlying = { command: childArgs[3], args: childArgs.slice(4) };
+    assert.strictEqual(underlying.command, "pi", "watchdog wraps the pi -p subprocess");
+    assert.strictEqual(Number(childArgs[1]), 60000, "watchdog timeout should follow reviewTimeoutMs");
+    assert.deepStrictEqual(options, { cwd: "/tmp/local-session", timeout: 65000 });
   });
 
   it("surfaces one actionable diagnostic when direct and subprocess review both fail", async () => {

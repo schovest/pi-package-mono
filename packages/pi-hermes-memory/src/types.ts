@@ -38,6 +38,8 @@ export interface MemoryConfig {
   reviewEnabled: boolean;
   /** How background review invokes the LLM. Default: direct */
   reviewTransport?: ReviewTransport;
+  /** Wall-clock budget for one background review completion (direct or subprocess). Default: 240000 */
+  reviewTimeoutMs?: number;
   /** Flush memories before compaction. Default: true */
   flushOnCompact: boolean;
   /** Flush memories on session shutdown. Default: true */

@@ -505,6 +505,7 @@ Create `~/.pi/agent/hermes-memory-config.json`:
   "reviewRecentMessages": 0,
   "reviewEnabled": true,
   "reviewTransport": "direct",
+  "reviewTimeoutMs": 240000,
   "memoryOverflowStrategy": "auto-consolidate",
   "autoConsolidate": true,
   "correctionDetection": true,
@@ -541,6 +542,7 @@ Create `~/.pi/agent/hermes-memory-config.json`:
 | `nudgeToolCalls` | `15` | Tool calls between auto-reviews (OR with turns) |
 | `reviewRecentMessages` | `0` | Recent messages included in background review (`0` = all) |
 | `reviewEnabled` | `true` | Enable/disable background learning loop |
+| `reviewTimeoutMs` | `240000` | Maximum time in milliseconds for one background review completion (direct transport and subprocess fallback alike). Review prompts include the full conversation and memory dumps, so modest models routinely need more than 120s — raise this if reviews are being killed mid-run |
 | `reviewTransport` | `direct` | LLM transport for background review, session flush, correction save, and manual consolidation: `direct` uses in-process `completeSimple()` with subprocess fallback; `subprocess` forces legacy `pi -p` only |
 | `memoryOverflowStrategy` | `auto-consolidate` | Behavior when MEMORY.md, USER.md, failures.md, or project-scoped memory reaches its character limit: `auto-consolidate` runs the existing consolidation flow; `reject` returns an error; `fifo-evict` rotates older entries in file order until the new entry fits |
 | `autoConsolidate` | `true` | Legacy alias for `memoryOverflowStrategy` when `memoryOverflowStrategy` is not set (`true` = `auto-consolidate`, `false` = `reject`) |

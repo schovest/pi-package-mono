@@ -13,6 +13,7 @@ import {
   DEFAULT_PROJECTS_MEMORY_DIR,
   DEFAULT_PROJECT_CHAR_LIMIT,
   DEFAULT_REVIEW_RECENT_MESSAGES,
+  DEFAULT_REVIEW_TIMEOUT_MS,
   DEFAULT_USER_CHAR_LIMIT,
 } from "./constants.js";
 import { AGENT_ROOT, normalizeConfiguredMemoryDir, normalizeProjectsMemoryDir } from "./paths.js";
@@ -55,6 +56,7 @@ const DEFAULT_CONFIG: MemoryConfig = {
   reviewRecentMessages: DEFAULT_REVIEW_RECENT_MESSAGES,
   reviewEnabled: true,
   reviewTransport: "direct",
+  reviewTimeoutMs: DEFAULT_REVIEW_TIMEOUT_MS,
   flushOnCompact: true,
   flushOnShutdown: true,
   flushMinTurns: DEFAULT_FLUSH_MIN_TURNS,
@@ -106,6 +108,7 @@ export function loadConfig(configPath = DEFAULT_CONFIG_PATH): MemoryConfig {
       if (isNonNegativeNumber(parsed.reviewRecentMessages)) config.reviewRecentMessages = parsed.reviewRecentMessages;
       if (typeof parsed.reviewEnabled === "boolean") config.reviewEnabled = parsed.reviewEnabled;
       if (isReviewTransport(parsed.reviewTransport)) config.reviewTransport = parsed.reviewTransport;
+      if (isNonNegativeNumber(parsed.reviewTimeoutMs)) config.reviewTimeoutMs = parsed.reviewTimeoutMs;
       if (typeof parsed.flushOnCompact === "boolean") config.flushOnCompact = parsed.flushOnCompact;
       if (typeof parsed.flushOnShutdown === "boolean") config.flushOnShutdown = parsed.flushOnShutdown;
       if (typeof parsed.flushMinTurns === "number") config.flushMinTurns = parsed.flushMinTurns;

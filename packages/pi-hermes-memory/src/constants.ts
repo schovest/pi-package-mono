@@ -27,6 +27,8 @@ export const DEFAULT_NUDGE_INTERVAL = 10;
 export const DEFAULT_FLUSH_MIN_TURNS = 6;
 export const DEFAULT_NUDGE_TOOL_CALLS = 15;
 export const DEFAULT_REVIEW_RECENT_MESSAGES = 0;
+/** Wall-clock budget for a single background review completion (direct or subprocess). */
+export const DEFAULT_REVIEW_TIMEOUT_MS = 240000;
 export const DEFAULT_FLUSH_RECENT_MESSAGES = 0;
 /**
  * A consolidation run pays child-process boot plus a full LLM turn, which
