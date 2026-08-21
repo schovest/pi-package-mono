@@ -22,7 +22,7 @@ describe("loadConfig", () => {
     assert.strictEqual(config.userCharLimit, 5000);
     assert.strictEqual(config.nudgeInterval, 10);
     assert.strictEqual(config.reviewRecentMessages, 0);
-    assert.strictEqual(config.reviewEnabled, true);
+    assert.strictEqual(config.reviewEnabled, false);
     assert.strictEqual(config.reviewTransport, "direct");
     assert.strictEqual(config.flushOnCompact, true);
     assert.strictEqual(config.flushOnShutdown, true);
@@ -108,7 +108,7 @@ describe("loadConfig", () => {
     assert.strictEqual(config.llmThinkingOverride, "minimal");
     // Unset values use defaults
     assert.strictEqual(config.userCharLimit, 5000);
-    assert.strictEqual(config.reviewEnabled, true);
+    assert.strictEqual(config.reviewEnabled, false);
   });
 
   it("handles partial config (missing keys use defaults)", () => {
@@ -257,7 +257,7 @@ describe("loadConfig", () => {
     fs.mkdirSync(path.dirname(TEST_CONFIG_PATH), { recursive: true });
     fs.writeFileSync(TEST_CONFIG_PATH, "");
     const config = loadConfig(TEST_CONFIG_PATH);
-    assert.strictEqual(config.reviewEnabled, true);
+    assert.strictEqual(config.reviewEnabled, false);
   });
 
   it("handles malformed JSON (falls back to defaults)", () => {
@@ -265,7 +265,7 @@ describe("loadConfig", () => {
     fs.writeFileSync(TEST_CONFIG_PATH, "{ bad json }");
     const config = loadConfig(TEST_CONFIG_PATH);
     assert.strictEqual(config.memoryCharLimit, 5000);
-    assert.strictEqual(config.reviewEnabled, true);
+    assert.strictEqual(config.reviewEnabled, false);
   });
 
   it("ignores unknown keys in config file", () => {
@@ -281,7 +281,7 @@ describe("loadConfig", () => {
     const config = loadConfig(TEST_CONFIG_PATH);
     assert.strictEqual(config.memoryCharLimit, 1000);
     assert.strictEqual(config.memoryMode, "policy-only");
-    assert.strictEqual(config.reviewEnabled, true);
+    assert.strictEqual(config.reviewEnabled, false);
   });
 
   it("ignores invalid memoryMode values", () => {

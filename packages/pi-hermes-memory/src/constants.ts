@@ -158,7 +158,7 @@ MEMORY TARGETS:
 - 'failure': failures, corrections, insights, conventions, preferences, and tool quirks
 
 TOOLS:
-- memory_add requires target and content; category and failure_reason are optional for failure memories.
+- memory_add requires content; target is optional — when omitted, the entry goes to the active project's memory, or global memory when no project is active. category and failure_reason are optional for failure memories.
 - memory_replace requires target, old_text, and content.
 - memory_remove requires target and old_text.
 - Use the action-specific tool that matches the requested mutation.`;

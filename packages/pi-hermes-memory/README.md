@@ -18,7 +18,7 @@ Your Pi agent normally forgets everything when you close a session. **This exten
 - 🏷️ **Categorized memories** — failures, corrections, insights, conventions, and tool quirks organized for fast retrieval
 - 🛡️ **Secret scanning** — API keys and tokens are blocked from being saved
 - 📚 **Procedural skills** — the agent saves *how* it solved problems, not just what
-- ⚡ **Background learning** — reviews every 10 turns, saves what matters
+- ⚡ **Background learning** — opt-in: reviews every 10 turns, saves what matters
 - 🔄 **Auto-consolidation** — merges entries when full, never loses data
 
 ## Quick Start
@@ -59,7 +59,7 @@ No manual action is needed. Launch Pi once after upgrade to let migration/normal
 | 🔄 **Memory Search Sync** | Successful Markdown memory writes are mirrored into SQLite for `memory_search` |
 | ⚠️ **Failure Memory** | Learn from failures — stores what didn't work and why |
 | 📚 **Procedural Skills** | The agent saves *how* it solved problems as reusable docs |
-| ⚡ **Background Learning** | Every 10 turns (or 15 tool calls) the agent reviews and saves |
+| ⚡ **Background Learning** | Opt-in (default off): every 10 turns (or 15 tool calls) the agent reviews and saves |
 | 🔧 **Correction Detection** | When you correct the agent, it saves immediately |
 | 🔄 **Auto-Consolidation** | When memory hits capacity, auto-merges instead of erroring |
 | 🛡️ **Secret Scanning** | API keys, tokens, SSH keys blocked from persistence |
@@ -209,7 +209,7 @@ The agent learns from failures, corrections, and insights — just like humans d
 
 ### How It Works
 
-1. **Auto-detection**: Background review extracts failures from conversations
+1. **Auto-detection**: When the background review is enabled (default: off), it extracts failures from conversations
 2. **Correction capture**: When you correct the agent, it saves what went wrong
 3. **Search guidance**: The memory policy tells the agent when to search failures instead of injecting them by default
 4. **Searchable**: Use `memory_search("auth", category: "failure")` to find past failures
@@ -238,7 +238,7 @@ The agent gets action-specific memory tools it can call proactively:
 
 | Tool | Required fields | What it does |
 |---|---|---|
-| `memory_add` | `target`, `content` | Append a new durable entry |
+| `memory_add` | `content` | Append a new durable entry. `target` is optional — omitted defaults to project memory when a project is active, otherwise global memory |
 | `memory_replace` | `target`, `old_text`, `content` | Update an existing entry matched by substring |
 | `memory_remove` | `target`, `old_text` | Delete an existing entry matched by substring |
 
@@ -393,7 +393,7 @@ You can also trigger this manually with `/memory-consolidate`.
 
 ### Tool-Call-Aware Review
 
-Background review triggers based on **activity level**, not just turn count:
+The background review is **disabled by default** — set `"reviewEnabled": true` in the config to activate it. When enabled, it triggers based on **activity level**, not just turn count:
 
 - **Every 10 turns** — the default nudge interval
 - **OR every 15 tool calls** — catches complex tasks that involve many reads/edits/bash calls
@@ -503,7 +503,7 @@ Create `~/.pi/agent/hermes-memory-config.json`:
   "nudgeInterval": 10,
   "nudgeToolCalls": 15,
   "reviewRecentMessages": 0,
-  "reviewEnabled": true,
+  "reviewEnabled": false,
   "reviewTransport": "direct",
   "reviewTimeoutMs": 240000,
   "memoryOverflowStrategy": "auto-consolidate",
@@ -541,7 +541,7 @@ Create `~/.pi/agent/hermes-memory-config.json`:
 | `nudgeInterval` | `10` | Turns between auto-reviews |
 | `nudgeToolCalls` | `15` | Tool calls between auto-reviews (OR with turns) |
 | `reviewRecentMessages` | `0` | Recent messages included in background review (`0` = all) |
-| `reviewEnabled` | `true` | Enable/disable background learning loop |
+| `reviewEnabled` | `false` | Enable/disable background learning loop (the every-10-turns / every-15-tool-calls auto-review) |
 | `reviewTimeoutMs` | `240000` | Maximum time in milliseconds for one background review completion (direct transport and subprocess fallback alike). Review prompts include the full conversation and memory dumps, so modest models routinely need more than 120s — raise this if reviews are being killed mid-run |
 | `reviewTransport` | `direct` | LLM transport for background review, session flush, correction save, and manual consolidation: `direct` uses in-process `completeSimple()` with subprocess fallback; `subprocess` forces legacy `pi -p` only |
 | `memoryOverflowStrategy` | `auto-consolidate` | Behavior when MEMORY.md, USER.md, failures.md, or project-scoped memory reaches its character limit: `auto-consolidate` runs the existing consolidation flow; `reject` returns an error; `fifo-evict` rotates older entries in file order until the new entry fits |
@@ -598,7 +598,7 @@ The `sessions.db` SQLite database stores session history and extended memory ent
 - **CJK search length**: The trigram tokenizer supports CJK substring search for terms of three or more characters. One- and two-character `memory_search` terms may need a longer phrase or an English/ASCII token.
 
 - **`§` delimiter**: Memory entries are separated by `§` (section sign). If an entry naturally contains `§`, it will be split incorrectly on reload. This is rare in English text but possible. [Hermes uses the same delimiter.]
-- **Background review cost**: Each review cycle costs one full LLM API call via a child `pi -p` process. Correction detection and explicit skill saves can add additional calls when the agent decides they are worth it.
+- **Background review cost**: When the background review is enabled, each review cycle costs one full LLM API call (in-process direct transport by default, child `pi -p` in fallback mode). Correction detection and explicit skill saves can add additional calls when the agent decides they are worth it.
 - **Session search requires indexing**: Past sessions must be indexed before they're searchable. Run `/memory-index-sessions` to bulk-import, or let the extension auto-index on session shutdown.
 - **Older Markdown memories may need backfill**: If you saved memories before the SQLite mirror existed or search looks stale, run `/memory-sync-markdown`.
 - **Core memory limits still apply**: SQLite search mirroring does not bypass the 5,000-char core Markdown limit. If consolidation cannot free space, the write fails instead of becoming SQLite-only memory invisibly.

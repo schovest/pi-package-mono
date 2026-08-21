@@ -34,7 +34,7 @@ export interface MemoryConfig {
   nudgeInterval: number;
   /** Recent conversation messages included in background review. 0 = all. Default: 0 */
   reviewRecentMessages?: number;
-  /** Enable background learning loop. Default: true */
+  /** Enable background learning loop. Default: false */
   reviewEnabled: boolean;
   /** How background review invokes the LLM. Default: direct */
   reviewTransport?: ReviewTransport;

@@ -54,7 +54,7 @@ const DEFAULT_CONFIG: MemoryConfig = {
   projectCharLimit: DEFAULT_PROJECT_CHAR_LIMIT,
   nudgeInterval: DEFAULT_NUDGE_INTERVAL,
   reviewRecentMessages: DEFAULT_REVIEW_RECENT_MESSAGES,
-  reviewEnabled: true,
+  reviewEnabled: false,
   reviewTransport: "direct",
   reviewTimeoutMs: DEFAULT_REVIEW_TIMEOUT_MS,
   flushOnCompact: true,
