@@ -1,48 +1,68 @@
 {
-	"name": "@schovest/pi-goal",
-	"version": "0.1.3",
-	"description": "Goal orchestration extension for Pi coding agent",
-	"type": "module",
-	"types": "./index.ts",
-	"exports": {
-		".": {
-			"types": "./index.ts",
-			"import": "./index.ts",
-			"default": "./index.ts"
-		}
-	},
-	"license": "MIT",
-	"keywords": [
-		"pi-package",
-		"pi",
-		"goal",
-		"orchestration",
-		"coding-agent"
-	],
-	"pi": {
-		"extensions": [
-			"./index.ts"
-		]
-	},
-	"files": [
-		"index.ts"
-	],
-	"dependencies": {
-		"typebox": "^1.3.0"
-	},
-	"devDependencies": {
-		"@earendil-works/pi-coding-agent": "0.80.5"
-	},
-	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "*"
-	},
-	"peerDependenciesMeta": {
-		"@earendil-works/pi-coding-agent": {
-			"optional": true
-		}
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/schovest/pi-package-mono.git"
-	}
+  "name": "@schovest/pi-goal",
+  "version": "0.2.0",
+  "description": "Pi extension for autonomous single-objective /goal completion.",
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi",
+    "goal",
+    "automation"
+  ],
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "piExtension": {
+    "lifecycle": "stable"
+  },
+  "dependencies": {
+    "@narumitw/pi-tui-kit": "^0.56.0",
+    "typebox": "^1.3.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "0.80.5",
+    "@earendil-works/pi-coding-agent": "0.80.5",
+    "@earendil-works/pi-tui": "0.80.5"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-ai": {
+      "optional": true
+    },
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
+    "@earendil-works/pi-tui": {
+      "optional": true
+    },
+    "typebox": {
+      "optional": true
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schovest/pi-package-mono.git"
+  }
 }
