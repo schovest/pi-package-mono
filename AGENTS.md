@@ -11,7 +11,7 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 - 发布原始 `.ts` 源码，不做构建
 - 每个包独立维护版本号（见「版本管理」）
 
-当前包（10 个）：
+当前包（11 个）：
 
 | 包 | 说明 | 发布 |
 | --- | --- | --- |
@@ -25,12 +25,18 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 | `pi-mcp-adapter` | MCP 适配器 | ✅ |
 | `pi-sudo-helper` | sudo 密码注入 | ✅ |
 | `pi-tps` | tokens-per-second 监控 | ✅ |
+| `pi-hermes-memory` | 🧠 持久记忆 + 会话搜索 + 学习循环（SQLite FTS5） | ✅（未首发） |
 
 `pi-btw`/`pi-todo`/`pi-ask-user-question`/`pi-config`/`pi-i18n` 基于
 [@juicesharp/rpiv-* 2.4.0](https://github.com/juicesharp/rpiv-mono) 全量移植。
 **移植约定（不可破坏）**：相对导入保留上游 `.js` 后缀（`./config.js`）；
 `rpiv-*` 字符串字面量（配置路径 `~/.config/rpiv-*`、`Symbol.for("rpiv-*")`、组件 key）原样保留，
 改了就破坏行为/迁移；LICENSE 保留上游 juicesharp 版权署名。
+
+`pi-hermes-memory` 迁移自 [chandra447/pi-hermes-memory](https://github.com/chandra447/pi-hermes-memory) v0.9.6（npm 安装版基线，非 GitHub HEAD）。
+**移植约定**：相对导入保留 `.js` 后缀；src 与上游一致，`tests/` 从 GitHub 全文检出并适配 vitest（上游用 node:test + tsx 逐文件跑，且上游 tsc 不检查测试——本仓检查，已补齐类型）；
+`scripts/`（ensure-dev/check-min-sdk）与 `tests/run-all.sh` 已裁掉（单仓根 check/test 取代）；测试文件用 `beforeAll/afterAll/onTestFinished`、`describe` 不带 `{ concurrency }` 选项；
+LICENSE 保留上游 Chandra Teja 版权署名；上游未发布修复 #189（childExtensionSources 语义）为跟进项，勿混入。
 
 ### 代码风格
 

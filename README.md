@@ -13,6 +13,7 @@
 | `pi-config` | 共享配置 I/O 工具 — XDG 路径解析、JSON 读写、TypeBox 校验 | [`@schovest/pi-config`](https://www.npmjs.com/package/@schovest/pi-config) |
 | `pi-i18n` | 本地化基础 — 语言检测、`/languages` 命令、跨包语言注册表 | [`@schovest/pi-i18n`](https://www.npmjs.com/package/@schovest/pi-i18n) |
 | `pi-test-utils` | 内部测试夹具（private，不发布） | [`@schovest/pi-test-utils`](https://www.npmjs.com/package/@schovest/pi-test-utils) |
+| `pi-hermes-memory` | 🧠 持久记忆 + 会话搜索 + 自动合并 + 程序化技能（迁移自 chandra447/pi-hermes-memory v0.9.6） | [`@schovest/pi-hermes-memory`](https://www.npmjs.com/package/@schovest/pi-hermes-memory) |
 
 `pi-btw`、`pi-todo`、`pi-ask-user-question`、`pi-config`、`pi-i18n`、`pi-test-utils` 基于 [@juicesharp/rpiv-*](https://github.com/juicesharp/rpiv-mono) 2.4.0 移植。
 

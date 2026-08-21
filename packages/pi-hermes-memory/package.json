@@ -1,0 +1,77 @@
+{
+	"name": "@schovest/pi-hermes-memory",
+	"version": "0.9.6",
+	"description": "🧠 Persistent memory + 🔍 session search + 🛡️ secret scanning for Pi. Token-aware policy-only memory by default, SQLite FTS5 search, auto-consolidation, procedural skills. 732 tests. Ported from Hermes agent.",
+	"type": "module",
+	"types": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts",
+			"default": "./src/index.ts"
+		}
+	},
+	"license": "MIT",
+	"keywords": [
+		"pi-package",
+		"pi-extension",
+		"memory",
+		"persistent-memory",
+		"session-search",
+		"sqlite",
+		"fts5",
+		"skills",
+		"learning-loop",
+		"agent",
+		"hermes",
+		"secret-scanning",
+		"content-scanner",
+		"correction-detection",
+		"auto-consolidation",
+		"memory-aging",
+		"context-fencing",
+		"two-tier-memory"
+	],
+	"files": [
+		"src",
+		"README.md",
+		"LICENSE",
+		"docs"
+	],
+	"pi": {
+		"extensions": [
+			"./src/index.ts"
+		]
+	},
+	"dependencies": {
+		"better-sqlite3": "^12.9.0",
+		"strip-ansi": "7.2.0",
+		"typebox": "^1.3.0"
+	},
+	"devDependencies": {
+		"@earendil-works/pi-ai": "0.80.5",
+		"@earendil-works/pi-coding-agent": "0.80.5",
+		"@earendil-works/pi-tui": "0.80.5",
+		"@types/better-sqlite3": "^7.6.13"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-ai": "*",
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	},
+	"peerDependenciesMeta": {
+		"@earendil-works/pi-ai": {
+			"optional": true
+		},
+		"@earendil-works/pi-coding-agent": {
+			"optional": true
+		},
+		"@earendil-works/pi-tui": {
+			"optional": true
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/schovest/pi-package-mono.git"
+	}
+}
