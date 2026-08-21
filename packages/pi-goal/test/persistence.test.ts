@@ -217,7 +217,7 @@ test("legacy cleanup uses Pi agent directory tilde expansion", () => {
   writeFileSync(stateFile, JSON.stringify({ [cwd]: { stale: true }, [untouchedCwd]: { keep: true } }));
 
   try {
-    const persistenceUrl = pathToFileURL(join(process.cwd(), "packages/goal/src/persistence.ts")).href;
+    const persistenceUrl = pathToFileURL(join(process.cwd(), "packages/pi-goal/src/persistence.ts")).href;
     const script = `const { clearLegacyPersistedGoal } = await import(${JSON.stringify(persistenceUrl)}); clearLegacyPersistedGoal(${JSON.stringify(cwd)});`;
     const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "--eval", script], {
       cwd: process.cwd(),

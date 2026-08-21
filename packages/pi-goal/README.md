@@ -52,7 +52,7 @@ pi -e npm:@schovest/pi-goal
 Try this package locally from the repository root:
 
 ```bash
-pi -e ./packages/goal
+pi -e ./packages/pi-goal
 ```
 
 This package publishes raw TypeScript source (`src/index.ts`), no build step is needed.

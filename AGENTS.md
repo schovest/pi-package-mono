@@ -38,7 +38,7 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 `scripts/`（ensure-dev/check-min-sdk）与 `tests/run-all.sh` 已裁掉（单仓根 check/test 取代）；测试文件用 `beforeAll/afterAll/onTestFinished`、`describe` 不带 `{ concurrency }` 选项；
 LICENSE 保留上游 Chandra Teja 版权署名；上游未发布修复 #189（childExtensionSources 语义）为跟进项，勿混入。
 
-`pi-goal`（目录 `packages/goal`）迁移自 [narumiruna/pi-extensions](https://github.com/narumiruna/pi-extensions) `packages/pi-goal` v0.52.2（npm tarball 与 tag 源一致）。
+`pi-goal`（目录 `packages/pi-goal`）迁移自 [narumiruna/pi-extensions](https://github.com/narumiruna/pi-extensions) `packages/pi-goal` v0.52.2（npm tarball 与 tag 源一致）。
 **移植约定**：相对导入保留 `.js` 后缀；src 全量搬运，旧弱实现（单文件 index.ts）已删除；`scripts/build-runtime.mjs`、`dist/` 产物与 3 个 dist 构建测试（build-runtime/generated-entry/goal-runtime-smoke）不适用已裁掉；`test/support.ts`（createMockPi/createMockContext）放在仓根 `test/`，上游 `../../../test/support.js` 相对导入保持不变；persistence 子进程测试已改为 `--import tsx` + 源码路径（上游用 node_modules/.cache 构建产物）。
 **降级兼容（关键）**：上游依赖 pi-tui 0.84+ 的 `stripTerminalSequences`（0.80.5 缺失 → goal_complete 报 `is not a function`）；`src/terminal-compat.ts` 用命名空间导入 + 探测（`??` 回退本地等价实现，逻辑与上游 extractAnsiCode/stripTerminalSequences 一致），errors.ts 改从该模块导入。升级上游后若 pi-tui 已导出该函数，命中断言：本包 devDeps 固定在 0.80.5，勿随上游升到 0.84（除非同时加兼容层）。
 
