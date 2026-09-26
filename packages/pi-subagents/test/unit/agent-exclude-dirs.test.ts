@@ -1,8 +1,9 @@
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
+
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, it, mock } from "node:test";
 import {
   clearAgentDiscoveryCache,
   discoverAgentSnapshot,
@@ -19,11 +20,11 @@ function recordReads(): string[] {
   const reads: string[] = [];
   const readdir = fs.readdirSync;
   const readFile = fs.readFileSync;
-  mock.method(fs, "readdirSync", (...args: Parameters<typeof fs.readdirSync>) => {
+  vi.spyOn(fs, "readdirSync").mockImplementation((...args: Parameters<typeof fs.readdirSync>) => {
     reads.push(String(args[0]));
     return readdir(...args);
   });
-  mock.method(fs, "readFileSync", (...args: Parameters<typeof fs.readFileSync>) => {
+  vi.spyOn(fs, "readFileSync").mockImplementation((...args: Parameters<typeof fs.readFileSync>) => {
     reads.push(String(args[0]));
     return readFile(...args);
   });
@@ -46,7 +47,7 @@ describe("settings subagents.agentExcludeDirs", () => {
     clearAgentDiscoveryCache();
   });
   afterEach(() => {
-    mock.restoreAll();
+    vi.restoreAllMocks();
     if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
     else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
     fs.rmSync(root, { recursive: true, force: true });
@@ -57,11 +58,14 @@ describe("settings subagents.agentExcludeDirs", () => {
   }
 
   it("prunes nested sources, diagnostics and explicit roots in every projection while retaining legacy agents", () => {
+    // 移植适配：fork 删除 <root>/.agents 发现源。project-legacy 改经显式 scan root
+    // (<root>/.pi/extra-agents) 提供；"agents" 排除项继续裁掉 .pi/agents 的报告与诊断。
     const userPlugins = path.join(user, "agents", "plugins");
     const projectPlugins = path.join(project, ".agents", "plugins");
     const fixedProjectRoot = path.join(project, ".pi", "agents");
+    const extraProjectAgents = path.join(project, ".pi", "extra-agents");
     writeAgent(path.join(user, "agents"), "user-legacy");
-    writeAgent(path.join(project, ".agents"), "project-legacy");
+    writeAgent(extraProjectAgents, "project-legacy");
     fs.mkdirSync(fixedProjectRoot, { recursive: true });
     fs.writeFileSync(path.join(fixedProjectRoot, "fixed-invalid.md"), "---\nname: fixed-invalid\n---\nbody");
     for (const dir of [userPlugins, projectPlugins]) {
@@ -70,7 +74,10 @@ describe("settings subagents.agentExcludeDirs", () => {
       fs.writeFileSync(path.join(dir, "invalid.md"), "---\nname: invalid\n---\nbody");
     }
     settings(user, { agentExcludeDirs: ["agents/plugins"], agentScanDirs: [userPlugins, projectPlugins] });
-    settings(path.join(project, ".pi"), { agentExcludeDirs: ["../.agents/plugins", "agents"] });
+    settings(path.join(project, ".pi"), {
+      agentExcludeDirs: ["../.agents/plugins", "agents"],
+      agentScanDirs: [extraProjectAgents],
+    });
     for (const scope of ["user", "project", "both"] as const) {
       for (const result of [
         discoverAgents(project, scope),
@@ -185,7 +192,7 @@ describe("settings subagents.agentExcludeDirs", () => {
         ),
         false,
       );
-      mock.restoreAll();
+      vi.restoreAllMocks();
       fs.unlinkSync(alias);
       fs.symlinkSync(allowed, alias, "dir");
       const cached = discoverAgentSnapshot(project, "both", undefined, { includeChains: false });

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { registerMainWatchdog } from "../../src/watchdog/register-main.ts";
 import { MainWatchdogRuntime, type WatchdogReviewFunction } from "../../src/watchdog/runtime.ts";
 import { DEFAULT_WATCHDOG_CONFIG } from "../../src/watchdog/settings.ts";

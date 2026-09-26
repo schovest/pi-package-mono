@@ -3,8 +3,8 @@ import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
+import { describe, it } from "vitest";
 import {
   ASYNC_DIR,
   CHAIN_RUNS_DIR,
@@ -150,7 +150,14 @@ console.log(JSON.stringify({ agentDir: getAgentDir(), profilePath: path.join(pro
       ["--import", loaderUrl, "--input-type=module", "--eval", "console.log(process.env.PI_SUBAGENTS_TEST_PARENT_PID)"],
       {
         encoding: "utf-8",
-        env: { ...process.env, PI_SUBAGENTS_TEST_LOADER: "loaded", PI_SUBAGENTS_TEST_PARENT_PID: String(process.pid) },
+        // 移植适配：上游 node --test 子进程天然继承 NODE_TEST_CONTEXT（模拟嵌套 test-file 进程）；
+        // vitest worker 没有该变量，这里显式注入以保持被测协议不变。
+        env: {
+          ...process.env,
+          NODE_TEST_CONTEXT: "1",
+          PI_SUBAGENTS_TEST_LOADER: "loaded",
+          PI_SUBAGENTS_TEST_PARENT_PID: String(process.pid),
+        },
       },
     );
     assert.equal(result.status, 0, result.stderr);

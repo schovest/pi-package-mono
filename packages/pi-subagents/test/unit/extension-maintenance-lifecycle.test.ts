@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 
 const script = String.raw`
 	const handlers = new Map();

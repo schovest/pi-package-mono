@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { registerChildWatchdog } from "../../src/watchdog/register-child.ts";
 import type { WatchdogReviewFunction } from "../../src/watchdog/runtime.ts";
 

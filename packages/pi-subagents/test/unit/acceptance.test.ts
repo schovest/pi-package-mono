@@ -4,8 +4,8 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import type { Message } from "@earendil-works/pi-ai";
+import { describe, it } from "vitest";
 import { discoverAgentsAll } from "../../src/agents/agents.ts";
 import {
   acceptanceFailureMessage,
@@ -62,7 +62,8 @@ function tempGitRepo(): string {
 describe("acceptance gates", () => {
   it("applies checked acceptance to declared builtin writer profiles", () => {
     const builtins = discoverAgentsAll(tempRepo()).builtin;
-    const writerNames = ["worker", "claude-code-writer", "codex-exec-writer", "cursor-agent-writer"];
+    // fork: claude-code/codex-exec/cursor-agent 写手 builtin 已删除，仅保留 worker
+    const writerNames = ["worker"];
     assert.deepEqual(
       writerNames.map((name) => builtins.find((agent) => agent.name === name)?.acceptanceRole),
       writerNames.map(() => "writer"),

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it, onTestFinished } from "vitest";
 import { updateActiveRunIndex } from "../../src/runs/background/active-run-index.ts";
 import { drainOutstandingWork } from "../../src/runs/background/auto-drain.ts";
 import { nestedRunScope } from "../../src/runs/shared/nested-events.ts";
@@ -40,7 +40,7 @@ describe("headless background-work auto-drain", () => {
     const nestedRootRunId = randomUUID();
     const nested = nestedRunScope(nestedRootRunId);
     const ordinary = { asyncDirRoot: path.join(root, "runs"), resultsDir: path.join(root, "results") };
-    t.after(() => {
+    onTestFinished(() => {
       for (const dir of [root, nested.asyncDirRoot]) fs.rmSync(dir, { recursive: true, force: true });
     });
     const writeStatus = (dir: string, sessionId: string, status: "running" | "complete") => {

@@ -4,7 +4,13 @@ import fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { it } from "node:test";
+import { afterEach, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import {
   createNativeSupervisorChannel,
   ensureSupervisorChannelDir,
@@ -284,7 +290,7 @@ it("failed scheduled workflow persistence rolls back retained demand before acti
   const rename = fs.renameSync;
   const failedDirs: string[] = [];
   try {
-    t.mock.method(fs, "renameSync", (source: fs.PathLike, destination: fs.PathLike) => {
+    vi.spyOn(fs, "renameSync").mockImplementation((source: fs.PathLike, destination: fs.PathLike) => {
       if (String(destination).endsWith(`${path.sep}status.json`)) {
         failedDirs.push(path.dirname(String(destination)));
         throw Object.assign(new Error("scheduled status persistence failure"), { code: "EACCES" });
@@ -303,7 +309,7 @@ it("failed scheduled workflow persistence rolls back retained demand before acti
     f.channel.activateTransport();
     assert.equal(f.intervals.size, 0);
   } finally {
-    t.mock.restoreAll();
+    vi.restoreAllMocks();
     syncBuiltinESMExports();
     await f.dispose();
     for (const dir of failedDirs) fs.rmSync(dir, { recursive: true, force: true });

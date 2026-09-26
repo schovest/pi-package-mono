@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { backgroundProcessOptions } from "../../src/runs/shared/background-process-options.ts";
 
 test("Windows background runners stay hidden without requesting a new console", () => {

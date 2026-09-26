@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it, onTestFinished } from "vitest";
 import { updateActiveRunIndex } from "../../src/runs/background/active-run-index.ts";
 import { writeAsyncResultFile } from "../../src/runs/background/result-files.ts";
 import {
@@ -126,7 +126,7 @@ describe("bg_wait tool", () => {
         const root = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-nested-"));
         const nestedRootRunId = randomUUID();
         const scope = nestedRunScope(nestedRootRunId);
-        t.after(() => {
+        onTestFinished(() => {
           for (const dir of [root, scope.asyncDirRoot, scope.resultsDir])
             fs.rmSync(dir, { recursive: true, force: true });
         });
@@ -173,7 +173,7 @@ describe("bg_wait tool", () => {
     const nested = nestedRunScope(nestedRootRunId);
     const otherRoot = nestedRunScope(randomUUID());
     const ordinary = { asyncDirRoot: path.join(root, "runs"), resultsDir: path.join(root, "results") };
-    t.after(() => {
+    onTestFinished(() => {
       for (const dir of [root, nested.asyncDirRoot, nested.resultsDir, otherRoot.asyncDirRoot])
         fs.rmSync(dir, { recursive: true, force: true });
     });
@@ -217,7 +217,7 @@ describe("bg_wait tool", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-sibling-reconcile-"));
     const nestedRootRunId = randomUUID();
     const scope = nestedRunScope(nestedRootRunId);
-    t.after(() => {
+    onTestFinished(() => {
       for (const dir of [root, scope.asyncDirRoot]) fs.rmSync(dir, { recursive: true, force: true });
     });
     writeStatus(scope.asyncDirRoot, "foreign-persona", "running", {
@@ -249,7 +249,7 @@ describe("bg_wait tool", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-prefix-scopes-"));
     const nestedRootRunId = randomUUID();
     const scope = nestedRunScope(nestedRootRunId);
-    t.after(() => {
+    onTestFinished(() => {
       for (const dir of [root, scope.asyncDirRoot]) fs.rmSync(dir, { recursive: true, force: true });
     });
     const deps = baseDeps(root, makeState("owner"), { nestedRootRunId });
@@ -267,7 +267,7 @@ describe("bg_wait tool", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-nested-control-"));
     const nestedRootRunId = randomUUID();
     const scope = nestedRunScope(nestedRootRunId);
-    t.after(() => {
+    onTestFinished(() => {
       for (const dir of [root, scope.asyncDirRoot]) fs.rmSync(dir, { recursive: true, force: true });
     });
     const runId = randomUUID();

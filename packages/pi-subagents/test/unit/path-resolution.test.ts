@@ -2,7 +2,7 @@ import * as assert from "node:assert";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { after, before, describe, test } from "node:test";
+import { afterAll, beforeAll, describe, test } from "vitest";
 import { discoverAgents } from "../../src/agents/agents.ts";
 import { clearSkillCache, resolveSkillPath } from "../../src/agents/skills.ts";
 
@@ -20,7 +20,7 @@ function restoreEnv(name: "HOME" | "USERPROFILE" | "PI_CODING_AGENT_DIR", value:
   else process.env[name] = value;
 }
 
-before(() => {
+beforeAll(() => {
   fs.mkdirSync(cwdDir, { recursive: true });
   fs.mkdirSync(path.join(userAgentsDir, "skills"), { recursive: true });
   fs.writeFileSync(userAgentsCanary, "preserve me");
@@ -30,7 +30,7 @@ before(() => {
   process.env.PI_CODING_AGENT_DIR = path.join(homeDir, ".pi", "agent");
 });
 
-after(() => {
+afterAll(() => {
   try {
     assert.equal(fs.readFileSync(userAgentsCanary, "utf-8"), "preserve me");
   } finally {
@@ -71,7 +71,8 @@ describe("Path resolution for .agents and ~/.agents", () => {
     assert.strictEqual(resolved?.path, path.join(userSkillsDir, "test-skill-2.md"));
   });
 
-  test("should resolve project agents from both .agents and .pi/agents", () => {
+  // 移植适配：fork 删除 <root>/.agents 发现源——legacy 目录中的 agent 不再被发现。
+  test("should ignore project agents in .agents and resolve .pi/agents", () => {
     const legacyDir = path.join(cwdDir, ".agents");
     const agentsDir = path.join(cwdDir, ".pi", "agents");
     fs.mkdirSync(path.join(cwdDir, ".agents", "skills"), { recursive: true });
@@ -89,13 +90,13 @@ describe("Path resolution for .agents and ~/.agents", () => {
     const result = discoverAgents(cwdDir, "project");
     const legacyAgent = result.agents.find((a) => a.name === "test-agent-legacy");
     const agent = result.agents.find((a) => a.name === "test-agent-1");
-    assert.ok(legacyAgent);
-    assert.strictEqual(legacyAgent?.filePath, path.join(legacyDir, "test-agent-legacy.md"));
+    assert.equal(legacyAgent, undefined);
     assert.ok(agent);
     assert.strictEqual(agent?.filePath, path.join(agentsDir, "test-agent-1.md"));
   });
 
-  test("should resolve agents in ~/.agents", () => {
+  // 移植适配：fork 删除 ~/.agents 发现源——其中的 agent 不再被发现。
+  test("should ignore agents in ~/.agents", () => {
     fs.writeFileSync(
       path.join(userAgentsDir, "test-agent-2.md"),
       "---\nname: test-agent-2\ndescription: Test agent\n---\nAgent content",
@@ -103,7 +104,6 @@ describe("Path resolution for .agents and ~/.agents", () => {
 
     const result = discoverAgents(cwdDir, "user");
     const agent = result.agents.find((a) => a.name === "test-agent-2");
-    assert.ok(agent);
-    assert.strictEqual(agent?.filePath, path.join(userAgentsDir, "test-agent-2.md"));
+    assert.equal(agent, undefined);
   });
 });

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { validateStructuredOutputValue } from "../../src/runs/shared/structured-output.ts";
 import type { JsonSchemaObject } from "../../src/shared/types.ts";
 

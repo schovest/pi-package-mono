@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { describe, it, onTestFinished } from "vitest";
 import type { AgentConfig } from "../../src/agents/agents.ts";
 import { registerRequiredChildExtensions } from "../../src/api/required-child-extensions.ts";
 import {
@@ -50,7 +50,7 @@ describe("async runner execution", () => {
       fs.chmodSync(herdr, 0o755);
       const previousHerdrBin = process.env.HERDR_BIN;
       process.env.HERDR_BIN = herdr;
-      t.after(() => {
+      onTestFinished(() => {
         if (previousHerdrBin === undefined) delete process.env.HERDR_BIN;
         else process.env.HERDR_BIN = previousHerdrBin;
         fs.rmSync(bin, { recursive: true, force: true });
@@ -284,7 +284,7 @@ describe("async runner execution", () => {
       sessionId: ctx.currentSessionId,
       extensions: [{ id: "native-only", path: import.meta.filename }],
     });
-    t.after(registration.dispose);
+    onTestFinished(registration.dispose);
     const built = buildAsyncRunnerSteps("external-run", {
       chain: [{ agent: "external", task: "review" }],
       agents: [external],

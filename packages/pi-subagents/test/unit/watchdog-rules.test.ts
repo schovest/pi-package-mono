@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { evaluateLaunchRule, ruleViolationWarning, watchdogGlobMatch } from "../../src/watchdog/rules.ts";
 import type { WatchdogRulesConfig } from "../../src/watchdog/types.ts";
 

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { it } from "node:test";
+import { it } from "vitest";
 import { asyncResultTimeoutEvidence } from "../support/async-result-timeout-evidence.ts";
 
 it("correlates timeout evidence without promoting pending sidecars or exposing contents", () => {

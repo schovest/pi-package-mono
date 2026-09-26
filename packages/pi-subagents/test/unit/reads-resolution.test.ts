@@ -2,7 +2,7 @@ import * as assert from "node:assert";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { after, before, describe, test } from "node:test";
+import { afterAll, beforeAll, describe, test } from "vitest";
 import { expandHomePath, resolveChainPath } from "../../src/shared/settings.ts";
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-reads-resolution-"));
@@ -11,13 +11,13 @@ const chainDir = path.join(tmpDir, "chain");
 const originalHome = process.env.HOME;
 const originalUserProfile = process.env.USERPROFILE;
 
-before(() => {
+beforeAll(() => {
   process.env.HOME = homeDir;
   process.env.USERPROFILE = homeDir;
   assert.equal(os.homedir(), homeDir);
 });
 
-after(() => {
+afterAll(() => {
   if (originalHome === undefined) delete process.env.HOME;
   else process.env.HOME = originalHome;
   if (originalUserProfile === undefined) delete process.env.USERPROFILE;

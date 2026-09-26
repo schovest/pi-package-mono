@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import * as path from "node:path";
-import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { test } from "vitest";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 

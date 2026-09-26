@@ -4,7 +4,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { PassThrough } from "node:stream";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { handleInspectorAction } from "../../src/inspectors/actions.ts";
 import { readHerdrInspectorBinding } from "../../src/inspectors/herdr/actions.ts";
 import {

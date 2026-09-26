@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { settleHerdrExternalRunnerError } from "../../src/runs/background/subagent-runner.ts";
 import { HerdrRpcError, HerdrTransportError } from "../../src/runs/shared/herdr-connection.ts";
 import {

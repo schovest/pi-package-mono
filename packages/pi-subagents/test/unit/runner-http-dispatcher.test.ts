@@ -3,8 +3,8 @@ import * as fs from "node:fs";
 import { createServer } from "node:http";
 import * as os from "node:os";
 import * as path from "node:path";
-import { after, describe, it } from "node:test";
 import { EnvHttpProxyAgent, getGlobalDispatcher, fetch as undiciFetch } from "undici";
+import { afterAll, describe, it } from "vitest";
 import {
   DEFAULT_HTTP_IDLE_TIMEOUT_MS,
   installRunnerHttpDispatcher,
@@ -32,7 +32,7 @@ function fixture(settings: { global?: unknown; project?: unknown; globalRaw?: st
     fs.writeFileSync(path.join(cwd, getConfigDirName(), "settings.json"), JSON.stringify(settings.project));
   return { agentDir, cwd };
 }
-after(() => {
+afterAll(() => {
   for (const root of roots) fs.rmSync(root, { recursive: true, force: true });
 });
 

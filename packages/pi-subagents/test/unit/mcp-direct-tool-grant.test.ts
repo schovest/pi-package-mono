@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { planMcpDirectToolGrant } from "../../src/runs/shared/mcp-direct-tool-grant.ts";
 
 test("plans server grants from explicit metadata facts and preserves resource filtering", () => {

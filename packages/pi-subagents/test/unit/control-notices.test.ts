@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { handleSubagentControlNotice } from "../../src/extension/control-notices.ts";
 import type { ControlEvent, SubagentState } from "../../src/shared/types.ts";
 

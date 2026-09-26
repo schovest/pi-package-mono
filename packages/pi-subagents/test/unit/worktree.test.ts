@@ -4,9 +4,9 @@ import * as fs from "node:fs";
 import { createRequire, syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { describe, it } from "vitest";
 import {
   type WorktreeSetup,
   WorktreeSetupError,
@@ -78,17 +78,20 @@ const hookScriptSkip =
 // an awaited real child so subsequent tests retain normal mutation admission.
 async function runPoisonCaseInChild(name: string): Promise<boolean> {
   if (process.env.PI_WORKTREE_POISON_CASE === name) return false;
+  // 移植适配：上游以 node --test 子进程运行本文件（文件当时 import node:test）；
+  // vitest 化后子进程改走 vitest CLI，隔离语义不变（PI_WORKTREE_POISON_CASE 驱动叶子分支）。
   await promisify(execFile)(
     process.execPath,
     [
-      "--experimental-strip-types",
-      "--import",
-      "./test/support/register-loader.mjs",
-      "--test",
-      `--test-name-pattern=${name}`,
+      fileURLToPath(new URL("../../../../node_modules/vitest/vitest.mjs", import.meta.url)),
+      "run",
+      "--project",
+      "pi-subagents",
+      "--testNamePattern",
+      name,
       fileURLToPath(import.meta.url),
     ],
-    { env: { ...process.env, NODE_TEST_CONTEXT: undefined, PI_WORKTREE_POISON_CASE: name } },
+    { env: { ...process.env, PI_WORKTREE_POISON_CASE: name } },
   );
   return true;
 }

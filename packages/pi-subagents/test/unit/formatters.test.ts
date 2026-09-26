@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 import { formatContextUsage, formatTokens } from "../../src/shared/formatters.ts";
 
 test("formats million-scale token values with an M suffix", () => {

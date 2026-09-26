@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { WatchdogEmissionGuard, normalizeWatchdogEmissionText } from "../../src/watchdog/emission-guard.ts";
 import type { WatchdogWarning } from "../../src/watchdog/types.ts";
 

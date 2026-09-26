@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "vitest";
 import { handleManagementAction } from "../../src/agents/agent-management.ts";
 import { serializeAgent } from "../../src/agents/agent-serializer.ts";
 import {
@@ -247,7 +247,8 @@ describe("agent definition directory inspection", () => {
       assert.ok(discovered.directories.some((entry) => entry.source === "builtin"));
       assert.deepEqual(
         discovered.directories.filter((entry) => entry.source === "project").map((entry) => entry.path),
-        [path.join(project, ".agents"), path.join(project, ".pi", "agents")],
+        // fork: legacy <root>/.agents 发现源已删除
+        [path.join(project, ".pi", "agents")],
       );
     }));
 });
@@ -513,10 +514,11 @@ Review carefully.`,
     withTempHome(() => {
       const project = fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagents-symlinked-agent-dir-"));
       tempDirs.push(project);
-      const legacyAgentsRoot = path.join(project, ".agents");
+      // fork: legacy <root>/.agents 发现源已删除，改用 <root>/.pi/agents
+      const agentsRoot = path.join(project, ".pi", "agents");
       const sharedAgents = path.join(project, "shared-agents");
-      const linkedAgents = path.join(legacyAgentsRoot, "agents");
-      fs.mkdirSync(legacyAgentsRoot, { recursive: true });
+      const linkedAgents = path.join(agentsRoot, "agents");
+      fs.mkdirSync(agentsRoot, { recursive: true });
       fs.mkdirSync(sharedAgents, { recursive: true });
       writeAgent(path.join(sharedAgents, "linked.md"), "---\nname: linked\ndescription: Linked agent\n---\nBody");
       writeAgent(
@@ -1633,13 +1635,13 @@ Agent prompt
             agent.filePath === path.join(packageRoot, "agents", "SKILL.md"),
         ),
       );
-      assert.equal(
-        packageAgents.some((agent) => agent.filePath.includes(`${path.sep}.agents${path.sep}skills${path.sep}`)),
-        false,
-      );
-      assert.equal(
-        packageAgents.some((agent) => agent.name === "package-skill"),
-        false,
+      // 移植适配：fork 删除 .agents/skills 排除逻辑（isLegacyAgentSkillPath）——
+      // 包根下 .agents/skills 内的可解析 frontmatter 现在会被登记为 agent。
+      assert.ok(
+        packageAgents.some(
+          (agent) =>
+            agent.name === "package-skill" && agent.filePath.includes(`${path.sep}.agents${path.sep}skills${path.sep}`),
+        ),
       );
     }));
 
@@ -2704,7 +2706,7 @@ Review
 });
 
 describe("project agent directory discovery", () => {
-  it("discovers project agents from both .agents and .pi/agents", () => {
+  it("ignores .agents project agents and discovers .pi/agents", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagents-project-agent-dirs-"));
     tempDirs.push(dir);
     fs.mkdirSync(path.join(dir, ".agents", "skills"), { recursive: true });
@@ -2744,10 +2746,12 @@ Skill-named agent prompt
     );
 
     const result = discoverAgents(dir, "project");
-    assert.ok(
+    // 移植适配：fork 删除 <root>/.agents 发现源——legacy 不再被发现，canonical 仍被发现。
+    assert.equal(
       result.agents.find(
         (agent) => agent.name === "legacy" && agent.filePath === path.join(dir, ".agents", "legacy.md"),
       ),
+      undefined,
     );
     assert.ok(
       result.agents.find(
@@ -2797,7 +2801,11 @@ Skill prompt
     );
 
     const agents = discoverAgents(dir, "project").agents;
-    assert.ok(agents.find((agent) => agent.name === "legacy"));
+    // 移植适配：fork 删除 <root>/.agents 发现源——legacy agent 不再被发现。
+    assert.equal(
+      agents.find((agent) => agent.name === "legacy"),
+      undefined,
+    );
     assert.equal(
       agents.some((agent) => agent.filePath.includes(`${path.sep}.agents${path.sep}skills${path.sep}`)),
       false,
@@ -2838,7 +2846,11 @@ Skill prompt
       );
 
       const agents = discoverAgents(dir, "user").agents;
-      assert.ok(agents.find((agent) => agent.name === "user-agent"));
+      // 移植适配：fork 删除 ~/.agents 发现源——user-agent 不再被发现。
+      assert.equal(
+        agents.find((agent) => agent.name === "user-agent"),
+        undefined,
+      );
       assert.equal(
         agents.some((agent) => agent.filePath.includes(`${path.sep}.agents${path.sep}skills${path.sep}`)),
         false,

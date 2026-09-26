@@ -1,11 +1,11 @@
 import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
-import { after, describe, it } from "node:test";
+import { afterAll, describe, it } from "vitest";
 import { createMockPi } from "../support/mock-pi.ts";
 
 describe("mock Pi queue isolation", () => {
   const mockPi = createMockPi();
-  after(() => mockPi.uninstall());
+  afterAll(() => mockPi.uninstall());
 
   it("keeps the prior queue for children that inherited it before reset", () => {
     mockPi.install();

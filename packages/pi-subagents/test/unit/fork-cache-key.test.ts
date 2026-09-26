@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import * as os from "node:os";
-import { describe, it } from "node:test";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { describe, it } from "vitest";
 import { buildInProcessChildLaunch } from "../../src/runs/shared/child-launch.ts";
 import { deriveForkPromptCacheKey } from "../../src/runs/shared/child-tool-plan.ts";
 import { rewriteForkCacheProviderRequest } from "../../src/runs/shared/subagent-prompt-runtime.ts";

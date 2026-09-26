@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { CHILD_SESSION_NAME_MAX_CHARS, deriveChildSessionName } from "../../src/shared/child-session-name.ts";
 import { PROMPT_REDACTED } from "../../src/shared/utils.ts";
 

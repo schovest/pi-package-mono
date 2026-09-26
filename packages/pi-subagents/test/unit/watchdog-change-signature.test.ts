@@ -4,7 +4,7 @@ import * as fs from "node:fs";
 import { createRequire, syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it, onTestFinished } from "vitest";
 import { computeWatchdogRepoChangeSignature } from "../../src/watchdog/change-signature.ts";
 
 // The module under test hashes file content via `fs.readFileSync`, whose ESM
@@ -71,7 +71,7 @@ describe("watchdog change signature", () => {
     const parent = createRepo("watchdog-parent-");
     const checkout = path.join(parent, "vendor", "child");
     const ignoredFile = path.join(checkout, "node_modules", "ignored.bin");
-    t.after(() => {
+    onTestFinished(() => {
       fs.rmSync(parent, { recursive: true, force: true });
       fs.rmSync(childSource, { recursive: true, force: true });
     });
@@ -109,7 +109,7 @@ describe("watchdog change signature", () => {
 
   it("does not inspect untracked files in an empty repository", (t) => {
     const repo = createEmptyRepo("watchdog-empty-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
 
     fs.writeFileSync(path.join(repo, "untracked.txt"), "one\n", "utf-8");
     const first = computeWatchdogRepoChangeSignature(repo);
@@ -123,12 +123,12 @@ describe("watchdog change signature", () => {
 
   it("does not inspect untracked files when the repository root is the user home", (t) => {
     const repo = createRepo("watchdog-home-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
     const previousHome = process.env.HOME;
     const previousUserProfile = process.env.USERPROFILE;
     process.env.HOME = repo;
     process.env.USERPROFILE = repo;
-    t.after(() => {
+    onTestFinished(() => {
       if (previousHome === undefined) delete process.env.HOME;
       else process.env.HOME = previousHome;
       if (previousUserProfile === undefined) delete process.env.USERPROFILE;
@@ -149,7 +149,7 @@ describe("watchdog change signature", () => {
   function setThreshold(bytes: number, t: { after: (fn: () => void) => void }): void {
     const previous = process.env.PI_SUBAGENTS_MAX_HASH_FILE_BYTES;
     process.env.PI_SUBAGENTS_MAX_HASH_FILE_BYTES = String(bytes);
-    t.after(() => {
+    onTestFinished(() => {
       if (previous === undefined) delete process.env.PI_SUBAGENTS_MAX_HASH_FILE_BYTES;
       else process.env.PI_SUBAGENTS_MAX_HASH_FILE_BYTES = previous;
     });
@@ -158,7 +158,7 @@ describe("watchdog change signature", () => {
   function setTotalThreshold(bytes: number, t: { after: (fn: () => void) => void }): void {
     const previous = process.env.PI_SUBAGENTS_MAX_HASH_TOTAL_BYTES;
     process.env.PI_SUBAGENTS_MAX_HASH_TOTAL_BYTES = String(bytes);
-    t.after(() => {
+    onTestFinished(() => {
       if (previous === undefined) delete process.env.PI_SUBAGENTS_MAX_HASH_TOTAL_BYTES;
       else process.env.PI_SUBAGENTS_MAX_HASH_TOTAL_BYTES = previous;
     });
@@ -167,7 +167,7 @@ describe("watchdog change signature", () => {
   function setEntryThreshold(entries: number, t: { after: (fn: () => void) => void }): void {
     const previous = process.env.PI_SUBAGENTS_MAX_HASH_ENTRIES;
     process.env.PI_SUBAGENTS_MAX_HASH_ENTRIES = String(entries);
-    t.after(() => {
+    onTestFinished(() => {
       if (previous === undefined) delete process.env.PI_SUBAGENTS_MAX_HASH_ENTRIES;
       else process.env.PI_SUBAGENTS_MAX_HASH_ENTRIES = previous;
     });
@@ -175,7 +175,7 @@ describe("watchdog change signature", () => {
 
   it("uses a metadata marker for files above the (lowered) threshold instead of hashing content", (t) => {
     const repo = createRepo("watchdog-large-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
     setThreshold(1024, t);
 
     const filePath = path.join(repo, "big.txt");
@@ -200,7 +200,7 @@ describe("watchdog change signature", () => {
 
   it("uses metadata markers after the total content hash budget", (t) => {
     const repo = createRepo("watchdog-total-budget-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
     setTotalThreshold(10, t);
 
     const aPath = path.join(repo, "a.txt");
@@ -233,7 +233,7 @@ describe("watchdog change signature", () => {
 
   it("uses skipped markers after the entry budget", (t) => {
     const repo = createRepo("watchdog-entry-budget-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
     setEntryThreshold(3, t);
 
     const dir = path.join(repo, "files");
@@ -262,7 +262,7 @@ describe("watchdog change signature", () => {
 
   it("produces deterministic keys keyed on size and mtime for large files", (t) => {
     const repo = createRepo("watchdog-large-det-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
     setThreshold(1024, t);
 
     const filePath = path.join(repo, "big.txt");
@@ -291,7 +291,7 @@ describe("watchdog change signature", () => {
     (t) => {
       const repo = createRepo("watchdog-sparse-");
       const filePath = path.join(repo, "huge.bin");
-      t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+      onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
 
       const fd = fs.openSync(filePath, "w");
       try {
@@ -308,7 +308,7 @@ describe("watchdog change signature", () => {
 
   it("ignores node_modules below changed directories", (t) => {
     const repo = createRepo("watchdog-nested-ignored-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
 
     const subdir = path.join(repo, "nested");
     fs.mkdirSync(path.join(subdir, "node_modules"), { recursive: true });
@@ -328,7 +328,7 @@ describe("watchdog change signature", () => {
 
   it("applies the threshold guard recursively into untracked subdirectories", (t) => {
     const repo = createRepo("watchdog-recurse-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
     setThreshold(1024, t);
 
     const subdir = path.join(repo, "nested");
@@ -351,7 +351,7 @@ describe("watchdog change signature", () => {
 
   it("degrades to the metadata marker when a per-file read raises ERR_FS_FILE_TOO_LARGE", (t) => {
     const repo = createRepo("watchdog-inner-toolarge-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
 
     // Small file (default threshold) so it enters the content-hash try branch.
     fs.writeFileSync(path.join(repo, "small.txt"), "hello\n", "utf-8");
@@ -374,7 +374,7 @@ describe("watchdog change signature", () => {
 
   it("keeps a valid signature when a per-file read races into ENOENT", (t) => {
     const repo = createRepo("watchdog-inner-enoent-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
 
     fs.writeFileSync(path.join(repo, "small.txt"), "hello\n", "utf-8");
 
@@ -386,7 +386,7 @@ describe("watchdog change signature", () => {
 
   it("warns and falls back to metadata for other per-file read errors", (t) => {
     const repo = createRepo("watchdog-inner-eacces-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
 
     fs.writeFileSync(path.join(repo, "small.txt"), "hello\n", "utf-8");
 
@@ -407,7 +407,7 @@ describe("watchdog change signature", () => {
 
   it("returns undefined instead of throwing when hashing a changed path raises", (t) => {
     const repo = createRepo("watchdog-outer-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
 
     // Use a deterministic stat failure to exercise the outer fail-safe on every
     // platform without depending on POSIX permissions or ENOTDIR/ENOENT differences
@@ -431,7 +431,7 @@ describe("watchdog change signature", () => {
 
   it("still hashes small files by content when under the threshold", (t) => {
     const repo = createRepo("watchdog-small-");
-    t.after(() => fs.rmSync(repo, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(repo, { recursive: true, force: true }));
 
     const filePath = path.join(repo, "small.txt");
     fs.writeFileSync(filePath, "hello\n", "utf-8");

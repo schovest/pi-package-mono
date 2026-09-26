@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { formatWatchdogReviewMessage, formatWatchdogTurnDelta } from "../../src/watchdog/turn-delta.ts";
 import { SUBAGENT_WATCHDOG_WARNING_TYPE } from "../../src/watchdog/types.ts";
 

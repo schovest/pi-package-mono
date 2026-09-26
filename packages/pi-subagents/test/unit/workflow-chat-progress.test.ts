@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { readMissionBinding } from "../../src/missions/lifecycle.ts";
 import { createMission, readMission } from "../../src/missions/store.ts";
 import { encodeIndexSegment } from "../../src/runs/background/index-segment.ts";

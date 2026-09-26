@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { resolveAsyncByDefault } from "../../src/extension/config.ts";
 import {
   PI_CODING_AGENT_PACKAGE_ROOT_ENV,

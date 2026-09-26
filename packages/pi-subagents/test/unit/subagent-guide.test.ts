@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { SUBAGENT_GUIDE_TOPICS, readSubagentGuide } from "../../src/extension/subagent-guide.ts";
 import { SUBAGENT_ACTIONS } from "../../src/shared/types.ts";
 

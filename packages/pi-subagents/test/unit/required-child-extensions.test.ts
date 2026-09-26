@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { registerRequiredChildExtensions } from "../../src/api/required-child-extensions.ts";
 import { buildRunnerChildLaunch } from "../../src/runs/background/runner-child-launch.ts";
 import { buildInProcessChildLaunch } from "../../src/runs/shared/child-launch.ts";

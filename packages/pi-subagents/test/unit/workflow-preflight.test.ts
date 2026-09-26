@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import {
   WORKFLOW_PREFLIGHT_MAX_BYTES,
   WORKFLOW_PREFLIGHT_MAX_CLAIMS,

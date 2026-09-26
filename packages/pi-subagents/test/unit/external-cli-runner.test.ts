@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "vitest";
 import { PI_SUBAGENT_EXTENSION_BINDINGS_ENV } from "../../src/runs/shared/extension-bindings.ts";
 import { resolveExternalCliRunnerStatus } from "../../src/runs/shared/external-cli-contract.ts";
 import { clearExternalCliPreflightCacheForTests } from "../../src/runs/shared/external-cli-preflight.ts";

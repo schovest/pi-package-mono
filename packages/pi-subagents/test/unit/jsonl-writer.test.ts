@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { type DrainableSource, type JsonlWriteStream, createJsonlWriter } from "../../src/shared/jsonl-writer.ts";
 
 class MockSource implements DrainableSource {

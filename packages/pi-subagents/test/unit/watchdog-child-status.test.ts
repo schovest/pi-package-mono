@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import {
   CHILD_WATCHDOG_STATUS_EVENT,
   CHILD_WATCHDOG_WARNING_LIMIT,

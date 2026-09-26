@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Editor, type EditorComponent, visibleWidth } from "@earendil-works/pi-tui";
+import { describe, it } from "vitest";
 import {
   EXTERNAL_RUN_REGISTRY_KEY,
   EXTERNAL_RUN_REGISTRY_VERSION,

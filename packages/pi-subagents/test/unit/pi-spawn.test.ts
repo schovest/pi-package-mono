@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { type PiSpawnDeps, getPiSpawnCommand, resolvePiCliScript } from "../../src/runs/shared/pi-spawn.ts";
 import { PI_CODING_AGENT_PACKAGE_ROOT_ENV } from "../../src/shared/utils.ts";
 

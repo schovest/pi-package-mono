@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { mergeAgentsForScope } from "../../src/agents/agent-selection.ts";
 import type { AgentConfig } from "../../src/agents/agents.ts";
 

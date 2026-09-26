@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { it } from "node:test";
+import { it } from "vitest";
 import { runChildSession } from "../../src/runs/background/run-child-session.ts";
 import type { InProcessChildLaunch } from "../../src/runs/shared/child-launch.ts";
 import type { ChildSession, ChildSessionFactory } from "../../src/runs/shared/child-session.ts";

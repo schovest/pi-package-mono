@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import { join } from "node:path";
-import { it } from "node:test";
+import { it } from "vitest";
 import { listBackgroundWorkProviders, registerBackgroundWorkProvider } from "../../src/api/background-work.ts";
 import { releaseActiveRunIndex, updateActiveRunIndex } from "../../src/runs/background/active-run-index.ts";
 import { drainOutstandingWork } from "../../src/runs/background/auto-drain.ts";
@@ -306,7 +306,7 @@ for (const kind of [
       baseline,
       "observation preserves outcome and adds no index enumeration/status reads or metadata checks",
     );
-    t.diagnostic(`baseline = opted-in ${JSON.stringify(observed)}`);
+    console.log(`baseline = opted-in ${JSON.stringify(observed)}`);
   });
 }
 

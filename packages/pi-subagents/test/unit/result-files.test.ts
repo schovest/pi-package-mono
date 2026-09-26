@@ -3,7 +3,13 @@ import fsDefault, * as fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { afterEach, describe, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { MAX_INDEX_SEGMENT_BYTES, encodeIndexSegment } from "../../src/runs/background/index-segment.ts";
 import {
   cleanupResultIndexes,
@@ -311,7 +317,7 @@ describe("result file indexes", () => {
         success: true,
       });
 
-      t.mock.method(fsDefault, "renameSync", () => {
+      vi.spyOn(fsDefault, "renameSync").mockImplementation(() => {
         const error = new Error("destination exists") as NodeJS.ErrnoException;
         error.code = "EEXIST";
         throw error;
@@ -324,7 +330,7 @@ describe("result file indexes", () => {
       assert.equal(JSON.parse(fs.readFileSync(resultPath, "utf-8")).success, false);
       assert.equal(fs.existsSync(pendingPath(resultsDir, "session-a", "blocked")), true);
     } finally {
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
       fs.rmSync(resultsDir, { recursive: true, force: true });
     }
@@ -457,7 +463,7 @@ describe("result file indexes", () => {
       fsDefault.readFileSync = originalReadFileSync;
       fsDefault.readdirSync = originalReaddirSync;
       console.error = originalError;
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
       fs.rmSync(resultsDir, { recursive: true, force: true });
     }
@@ -480,7 +486,7 @@ describe("result file indexes", () => {
       const legacyIndexPath = path.join(legacyDir, legacyIndexFile);
       const nameTooLong = new Error("legacy alias is too long") as NodeJS.ErrnoException;
       nameTooLong.code = "ENAMETOOLONG";
-      t.mock.method(fsDefault, "statSync", ((filePath: fs.PathLike) => {
+      vi.spyOn(fsDefault, "statSync").mockImplementation(((filePath: fs.PathLike) => {
         if (String(filePath) === legacyIndexPath) throw nameTooLong;
         return originalStatSync(filePath);
       }) as typeof fsDefault.statSync);
@@ -494,7 +500,7 @@ describe("result file indexes", () => {
       assert.deepEqual(errors, []);
     } finally {
       console.error = originalError;
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
       fs.rmSync(resultsDir, { recursive: true, force: true });
     }
@@ -571,7 +577,7 @@ describe("result file indexes", () => {
         sessionId: "session-a",
         success: true,
       });
-      t.mock.method(fsDefault, "readFileSync", () => {
+      vi.spyOn(fsDefault, "readFileSync").mockImplementation(() => {
         throw error;
       });
       syncBuiltinESMExports();
@@ -581,7 +587,7 @@ describe("result file indexes", () => {
         (thrown) => thrown === error,
       );
     } finally {
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
       fs.rmSync(resultsDir, { recursive: true, force: true });
     }

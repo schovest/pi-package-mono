@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { test } from "vitest";
 import { HOST_PEER_ALIASES, resolveHostPeerAliases } from "../../src/runs/background/runner-aliases.ts";
 import { resolveInstalledPiPackageRoot } from "../../src/runs/shared/pi-spawn.ts";
 import {

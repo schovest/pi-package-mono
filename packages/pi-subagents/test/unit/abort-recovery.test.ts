@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import type { Message } from "@earendil-works/pi-ai";
+import { describe, it } from "vitest";
 import { ABORT_RECOVERY_PROMPT, planAbortRecovery } from "../../src/runs/shared/abort-recovery.ts";
 
 function messages(...entries: unknown[]): Message[] {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { formatModelThinking } from "../../src/shared/formatters.ts";
 import { aggregateStepStatus, formatActivityLabel, formatParallelOutcome } from "../../src/shared/status-format.ts";
 import type { AsyncJobStep } from "../../src/shared/types.ts";

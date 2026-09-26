@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import {
   MAX_STEER_QUEUE_SIZE,
   closeSteerInbox,
@@ -950,7 +950,7 @@ describe("control inbox diagnostics and active-owner cost", () => {
           const finalScans = scans;
           await new Promise((resolve) => setTimeout(resolve, 300));
           assert.equal(scans, finalScans, "no scans after owner cleanup");
-          t.diagnostic(
+          console.log(
             JSON.stringify({
               mode,
               owners,

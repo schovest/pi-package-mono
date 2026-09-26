@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import type { Model } from "@earendil-works/pi-ai";
+import { describe, it } from "vitest";
 import { opencodeSessionHeaders } from "../../src/shared/opencode-session-headers.ts";
 
 function model(provider: string, baseUrl: string): Model<any> {

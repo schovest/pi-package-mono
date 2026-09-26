@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { withCachedUiContext } from "../../src/shared/extension-context.ts";
 
 describe("cached extension UI context", () => {

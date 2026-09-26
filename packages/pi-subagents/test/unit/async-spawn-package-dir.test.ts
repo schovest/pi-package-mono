@@ -4,7 +4,13 @@ import fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import test from "node:test";
+import { afterEach, test, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { resolveInstalledPiPackageRoot, resolvePiPackageRoot } from "../../src/runs/shared/pi-spawn.ts";
 import { PI_CODING_AGENT_PACKAGE_ROOT_ENV } from "../../src/shared/utils.ts";
 import { makeAgent } from "../support/helpers.ts";
@@ -17,7 +23,7 @@ test("detached spawn does not keep an inherited bundled-layout PI_PACKAGE_DIR", 
   // the host; an ambient value from the outer environment would change the spawn env.
   delete process.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV];
   process.env.PI_PACKAGE_DIR = bundled;
-  const spawn = t.mock.method(childProcess, "spawn", () => {
+  const spawn = vi.spyOn(childProcess, "spawn").mockImplementation(() => {
     throw new Error("spawn boundary captured");
   });
   syncBuiltinESMExports();
@@ -45,10 +51,10 @@ test("detached spawn does not keep an inherited bundled-layout PI_PACKAGE_DIR", 
     });
     assert.match(result.content[0]!.text, /spawn boundary captured/);
     const npmRoot = resolvePiPackageRoot() ?? resolveInstalledPiPackageRoot();
-    assert.equal(spawn.mock.calls[0]!.arguments[2].env.PI_PACKAGE_DIR, npmRoot);
+    assert.equal(spawn.mock.calls[0]![2].env.PI_PACKAGE_DIR, npmRoot);
     assert.notEqual(npmRoot, bundled);
   } finally {
-    t.mock.restoreAll();
+    vi.restoreAllMocks();
     syncBuiltinESMExports();
     if (previous === undefined) delete process.env.PI_PACKAGE_DIR;
     else process.env.PI_PACKAGE_DIR = previous;
@@ -68,10 +74,10 @@ test("detached launch honors the package-root environment override when host det
   // launch while the same mock reproduces the closed failure without it.
   const override = detected[0]!;
   const exists = fs.existsSync;
-  t.mock.method(fs, "existsSync", (file) => (manifests.includes(String(file)) ? false : exists(file)));
+  vi.spyOn(fs, "existsSync").mockImplementation((file) => (manifests.includes(String(file)) ? false : exists(file)));
   const previous = process.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV];
   process.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV] = override;
-  const spawn = t.mock.method(childProcess, "spawn", () => {
+  const spawn = vi.spyOn(childProcess, "spawn").mockImplementation(() => {
     throw new Error("spawn boundary captured");
   });
   syncBuiltinESMExports();
@@ -99,9 +105,9 @@ test("detached launch honors the package-root environment override when host det
       acceptance: false,
     });
     assert.match(result.content[0]!.text, /spawn boundary captured/);
-    assert.equal(spawn.mock.calls[0]!.arguments[2].env[PI_CODING_AGENT_PACKAGE_ROOT_ENV], override);
+    assert.equal(spawn.mock.calls[0]![2].env[PI_CODING_AGENT_PACKAGE_ROOT_ENV], override);
   } finally {
-    t.mock.restoreAll();
+    vi.restoreAllMocks();
     syncBuiltinESMExports();
     if (previous === undefined) delete process.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV];
     else process.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV] = previous;
@@ -117,8 +123,8 @@ test("detached launch ignores a whitespace-only package-root override", async (t
     .map((dir) => path.join(dir, "package.json"));
   assert.ok(manifests.length > 0, "fixture must start with a detectable npm root");
   const exists = fs.existsSync;
-  t.mock.method(fs, "existsSync", (file) => (manifests.includes(String(file)) ? false : exists(file)));
-  const spawn = t.mock.method(childProcess, "spawn", () => {
+  vi.spyOn(fs, "existsSync").mockImplementation((file) => (manifests.includes(String(file)) ? false : exists(file)));
+  const spawn = vi.spyOn(childProcess, "spawn").mockImplementation(() => {
     throw new Error("must not spawn");
   });
   syncBuiltinESMExports();
@@ -149,7 +155,7 @@ test("detached launch ignores a whitespace-only package-root override", async (t
     assert.match(result.content[0]!.text, /installed npm package.*neither is available/);
     assert.equal(spawn.mock.calls.length, 0);
   } finally {
-    t.mock.restoreAll();
+    vi.restoreAllMocks();
     syncBuiltinESMExports();
     if (previous === undefined) delete process.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV];
     else process.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV] = previous;
@@ -167,8 +173,8 @@ test("npm detached launch fails closed when the detected package root is absent"
     .map((dir) => path.join(dir, "package.json"));
   assert.ok(manifests.length > 0, "fixture must start with a detectable npm root");
   const exists = fs.existsSync;
-  t.mock.method(fs, "existsSync", (file) => (manifests.includes(String(file)) ? false : exists(file)));
-  const spawn = t.mock.method(childProcess, "spawn", () => {
+  vi.spyOn(fs, "existsSync").mockImplementation((file) => (manifests.includes(String(file)) ? false : exists(file)));
+  const spawn = vi.spyOn(childProcess, "spawn").mockImplementation(() => {
     throw new Error("must not spawn");
   });
   syncBuiltinESMExports();
@@ -197,9 +203,9 @@ test("npm detached launch fails closed when the detected package root is absent"
     });
     assert.equal(result.isError, true);
     assert.match(result.content[0]!.text, /installed npm package.*neither is available/);
-    assert.equal(spawn.mock.callCount(), 0);
+    assert.equal(spawn.mock.calls.length, 0);
   } finally {
-    t.mock.restoreAll();
+    vi.restoreAllMocks();
     syncBuiltinESMExports();
     if (previous === undefined) delete process.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV];
     else process.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV] = previous;
@@ -223,7 +229,7 @@ test("detached spawn drops inherited Git repository routing variables and keeps 
   };
   const previous = Object.fromEntries(Object.keys(inherited).map((key) => [key, process.env[key]]));
   Object.assign(process.env, inherited);
-  const spawn = t.mock.method(childProcess, "spawn", () => {
+  const spawn = vi.spyOn(childProcess, "spawn").mockImplementation(() => {
     throw new Error("spawn boundary captured");
   });
   syncBuiltinESMExports();
@@ -248,7 +254,7 @@ test("detached spawn drops inherited Git repository routing variables and keeps 
       acceptance: false,
     });
     assert.match(result.content[0]!.text, /spawn boundary captured/);
-    const env = spawn.mock.calls[0]!.arguments[2].env;
+    const env = spawn.mock.calls[0]![2].env;
     for (const key of [
       "GIT_DIR",
       "GIT_WORK_TREE",
@@ -265,7 +271,7 @@ test("detached spawn drops inherited Git repository routing variables and keeps 
     assert.equal(env.GIT_ENV_SENTINEL_KEEP, "kept");
     assert.ok(env.PI_PACKAGE_DIR, "launch-owned variables are still set");
   } finally {
-    t.mock.restoreAll();
+    vi.restoreAllMocks();
     syncBuiltinESMExports();
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) delete process.env[key];

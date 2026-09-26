@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { createAtomicJsonWriter } from "../../src/shared/atomic-json.ts";
 
 class FakeFs {

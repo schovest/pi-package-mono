@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import * as os from "node:os";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { buildInProcessChildLaunch } from "../../src/runs/shared/child-launch.ts";
 import {
   type ExtensionBindings,

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { formatToolCall } from "../../src/shared/formatters.ts";
 import { compactForegroundResult, extractToolArgsPreview } from "../../src/shared/utils.ts";
 

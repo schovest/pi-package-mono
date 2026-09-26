@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import {
   ActiveAsyncCapacityError,
   acquireActiveAsyncCapacity,

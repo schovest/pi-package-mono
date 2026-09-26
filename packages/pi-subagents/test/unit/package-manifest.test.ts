@@ -3,8 +3,8 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { test } from "vitest";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -26,10 +26,10 @@ const expectedHostPeerRanges = {
   "@earendil-works/pi-tui": "*",
 } satisfies Record<(typeof hostPeerPackages)[number], string>;
 const expectedHostDevVersions = {
-  "@earendil-works/pi-agent-core": "0.87.0",
-  "@earendil-works/pi-ai": "0.87.0",
-  "@earendil-works/pi-coding-agent": "0.87.0",
-  "@earendil-works/pi-tui": "0.87.0",
+  "@earendil-works/pi-agent-core": "0.87.1",
+  "@earendil-works/pi-ai": "0.87.1",
+  "@earendil-works/pi-coding-agent": "0.87.1",
+  "@earendil-works/pi-tui": "0.87.1",
 } satisfies Record<(typeof hostPeerPackages)[number], string>;
 
 test("the root entrypoint exposes the runtime error flag to TypeScript consumers", () => {
@@ -38,9 +38,9 @@ test("the root entrypoint exposes the runtime error flag to TypeScript consumers
     fs.writeFileSync(
       path.join(consumerRoot, "consumer.ts"),
       `
-import "pi-subagents";
+import "@schovest/pi-subagents";
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
-import { registerWorkflowResource, type RegisterWorkflowResourceInput, type WorkflowResourceDefinition, type WorkflowResourceRegistration } from "pi-subagents/workflow-resources";
+import { registerWorkflowResource, type RegisterWorkflowResourceInput, type WorkflowResourceDefinition, type WorkflowResourceRegistration } from "@schovest/pi-subagents/workflow-resources";
 
 const definition: WorkflowResourceDefinition = {
 	name: "consumer.check", version: 1,
@@ -76,12 +76,22 @@ void result.isError;
             typeRoots: [path.join(projectRoot, "node_modules", "@types")],
             skipLibCheck: true,
             allowImportingTsExtensions: true,
-            baseUrl: consumerRoot,
+            // baseUrl 已被 TypeScript 6 弃用；paths 均为绝对路径，无需 baseUrl。
             paths: {
-              "pi-subagents": [path.join(projectRoot, "index.ts")],
-              "pi-subagents/workflow-resources": [path.join(projectRoot, "src/api/workflow-resources.ts")],
+              "@schovest/pi-subagents": [path.join(projectRoot, "index.ts")],
+              "@schovest/pi-subagents/workflow-resources": [path.join(projectRoot, "src/api/workflow-resources.ts")],
               "@earendil-works/pi-agent-core": [
-                path.join(projectRoot, "node_modules", "@earendil-works", "pi-agent-core", "dist", "index.d.ts"),
+                // 移植适配：pi-agent-core 0.87.1 无版本冲突，被 npm hoist 到仓根 node_modules。
+                path.join(
+                  projectRoot,
+                  "..",
+                  "..",
+                  "node_modules",
+                  "@earendil-works",
+                  "pi-agent-core",
+                  "dist",
+                  "index.d.ts",
+                ),
               ],
             },
           },
@@ -96,7 +106,8 @@ void result.isError;
     execFileSync(
       process.execPath,
       [
-        path.join(projectRoot, "node_modules", "typescript", "bin", "tsc"),
+        // 移植适配：typescript 是仓根 devDep（hoist 到仓根 node_modules），不在本包内。
+        path.join(projectRoot, "..", "..", "node_modules", "typescript", "bin", "tsc"),
         "--project",
         path.join(consumerRoot, "tsconfig.json"),
       ],
@@ -126,7 +137,7 @@ function collectSourceFiles(dir: string): string[] {
 test("published extension APIs use supported package entrypoints", async () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf-8"));
 
-  assert.equal(packageJson.private, true, "the source checkout must not be publishable");
+  assert.ok(!packageJson.private, "the fork package must be publishable");
   assert.deepEqual(packageJson.pi?.extensions, ["./index.ts"]);
   assert.equal(packageJson.files?.includes("index.ts"), true);
   assert.equal(packageJson.files?.includes("*.mjs"), true);
@@ -154,46 +165,46 @@ test("published extension APIs use supported package entrypoints", async () => {
     "./shared-types": "./src/api/shared-types.ts",
     "./project-panes": "./src/api/project-panes.ts",
   });
-  const agents = await import("pi-subagents/agents");
+  const agents = await import("@schovest/pi-subagents/agents");
   assert.equal(agents.RUNTIME_AGENT_REGISTER_EVENT, "pi-subagents:runtime-agent-register:v1");
   assert.equal(agents.RUNTIME_AGENT_REGISTER_VERSION, 1);
   assert.equal(typeof agents.registerAgentViaEvents, "function");
-  const backgroundWork = await import("pi-subagents/background-work");
+  const backgroundWork = await import("@schovest/pi-subagents/background-work");
   assert.equal(backgroundWork.BACKGROUND_WORK_PROTOCOL_VERSION, 1);
   assert.equal(backgroundWork.BACKGROUND_WORK_REGISTRY_KEY, "pi-subagents.background-work.v1");
-  const externalJobProvider = await import("pi-subagents/external-job-provider");
+  const externalJobProvider = await import("@schovest/pi-subagents/external-job-provider");
   assert.equal(externalJobProvider.EXTERNAL_JOB_PROVIDER_PROTOCOL_VERSION, 1);
   assert.equal(externalJobProvider.EXTERNAL_JOB_PROVIDER_REGISTRY_KEY, "pi-subagents.external-job-providers.v1");
   assert.equal(typeof externalJobProvider.registerExternalJobProvider, "function");
-  const externalRuns = await import("pi-subagents/external-runs");
+  const externalRuns = await import("@schovest/pi-subagents/external-runs");
   assert.equal(externalRuns.EXTERNAL_RUN_REGISTRY_VERSION, 2);
   assert.equal(typeof externalRuns.registerExternalRun, "function");
   assert.equal(typeof externalRuns.updateExternalRun, "function");
   assert.equal(typeof externalRuns.snapshotExternalRuns, "function");
   assert.equal(typeof externalRuns.unregisterExternalRun, "function");
-  const capability = await import("pi-subagents/capability-ceiling");
-  const workflowResources = await import("pi-subagents/workflow-resources");
+  const capability = await import("@schovest/pi-subagents/capability-ceiling");
+  const workflowResources = await import("@schovest/pi-subagents/workflow-resources");
   assert.deepEqual(Object.keys(workflowResources), ["registerWorkflowResource"]);
   assert.equal(typeof workflowResources.registerWorkflowResource, "function");
   assert.equal(capability.SUBAGENT_CAPABILITY_CEILING_VERSION, 1);
   assert.equal(capability.SUBAGENT_CAPABILITY_CEILING_REGISTRY_KEY, "pi-subagents.capability-ceiling.v1");
-  const delegation = await import("pi-subagents/delegation");
+  const delegation = await import("@schovest/pi-subagents/delegation");
   assert.equal(delegation.SUBAGENT_DELEGATION_REQUEST_EVENT, "prompt-template:subagent:request");
-  const preflight = await import("pi-subagents/preflight");
+  const preflight = await import("@schovest/pi-subagents/preflight");
   assert.equal(preflight.SUBAGENT_LAUNCH_CONTRACT_VERSION, 3);
   assert.equal(typeof preflight.resolveSubagentLaunchContract, "function");
-  const controlChannel = await import("pi-subagents/control-channel");
+  const controlChannel = await import("@schovest/pi-subagents/control-channel");
   assert.equal(typeof controlChannel.requestAsyncStop, "function");
-  const intercomBridge = await import("pi-subagents/intercom-bridge");
+  const intercomBridge = await import("@schovest/pi-subagents/intercom-bridge");
   assert.equal(typeof intercomBridge.resolveIntercomSessionTarget, "function");
-  const childToolPlan = await import("pi-subagents/child-tool-plan");
+  const childToolPlan = await import("@schovest/pi-subagents/child-tool-plan");
   assert.equal(typeof childToolPlan.resolvePiLaunchToolPlan, "function");
   assert.deepEqual(Object.keys(childToolPlan).sort(), ["resolvePiLaunchToolPlan"]);
-  const sharedTypes = await import("pi-subagents/shared-types");
+  const sharedTypes = await import("@schovest/pi-subagents/shared-types");
   assert.equal(typeof sharedTypes.wrapForkTask, "function");
   assert.equal(typeof sharedTypes.DEFAULT_FORK_PREAMBLE, "string");
   assert.equal("TEMP_ROOT_DIR" in sharedTypes, false);
-  const projectPanes = await import("pi-subagents/project-panes");
+  const projectPanes = await import("@schovest/pi-subagents/project-panes");
   assert.equal(projectPanes.PROJECT_PANES_API_VERSION, 1);
   assert.equal(typeof projectPanes.openProjectPane, "function");
   assert.equal(typeof projectPanes.getProjectPaneStatus, "function");
@@ -227,11 +238,14 @@ test("direct @earendil-works runtime imports are declared for CI installs", () =
 test("direct dependency declarations are exact version pins", () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf-8"));
 
+  // 移植适配：typebox 跟随仓根约定使用 ^ 范围（由 workspace 版本同步脚本管理），其余保持精确 pin。
   for (const section of ["dependencies", "devDependencies"] as const) {
     for (const [name, version] of Object.entries<string>(packageJson[section] ?? {})) {
+      if (section === "devDependencies" && name === "typebox") continue;
       assert.match(version, exactVersionPattern, `${section}.${name} should use an exact version`);
     }
   }
+  assert.equal(packageJson.devDependencies?.typebox, "^1.3.0");
 });
 
 test("host-owned packages are optional peers with supported ranges, not production dependencies", () => {
@@ -251,13 +265,14 @@ test("host-owned packages are optional peers with supported ranges, not producti
     );
   }
 });
-test("typebox is a bundled runtime dependency", () => {
+test("typebox resolves through the host peer with a dev-only range pin", () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, "package.json"), "utf-8"));
 
-  assert.equal(packageJson.dependencies?.typebox, "1.1.38");
-  assert.equal(packageJson.peerDependencies?.typebox, undefined);
-  assert.equal(packageJson.peerDependenciesMeta?.typebox, undefined);
-  assert.equal(packageJson.devDependencies?.typebox, undefined);
+  // 移植适配：fork 不打包 typebox，改由宿主 peer 提供（optional），devDeps 仅用于类型检查。
+  assert.equal(packageJson.dependencies?.typebox, undefined);
+  assert.equal(packageJson.peerDependencies?.typebox, "*");
+  assert.deepEqual(packageJson.peerDependenciesMeta?.typebox, { optional: true });
+  assert.equal(packageJson.devDependencies?.typebox, "^1.3.0");
 });
 
 test("host-owned development packages use the supported SDK baseline", () => {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { createCapacityResilientJsonWriter } from "../../src/shared/capacity-resilient-json.ts";
 
 type TimerTask = { callback: () => void; delayMs: number };

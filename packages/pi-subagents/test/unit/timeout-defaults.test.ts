@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import {
   DEFAULT_ASYNC_TIMEOUT_MS,
   DEFAULT_FOREGROUND_TIMEOUT_MS,

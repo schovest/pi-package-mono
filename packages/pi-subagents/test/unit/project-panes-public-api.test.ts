@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import {
   PROJECT_PANES_API_VERSION,
   PROJECT_PANE_TRUST_STATUS,
@@ -14,7 +14,7 @@ import {
   openProjectPane,
   projectPaneBindingPath,
   readProjectPaneBinding,
-} from "pi-subagents/project-panes";
+} from "../../src/api/project-panes.ts";
 
 describe("public project-panes package export", () => {
   it("exposes the versioned extension-to-extension lifecycle surface", () => {

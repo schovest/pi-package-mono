@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { waitForImportedAsyncRoot } from "../../src/runs/background/chain-root-attachment.ts";
 import { writePendingAsyncResultFile } from "../../src/runs/background/result-files.ts";
 
@@ -133,7 +139,7 @@ describe("async chain root attachment", () => {
 
   for (const proofState of [undefined, "pending"])
     it(`waits past the terminal grace for workflow-owned single publication with ${proofState ?? "absent"} root proof`, async (t) => {
-      t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 0 });
+      vi.useFakeTimers({ now: 0, toFake: ["setTimeout", "Date"] });
       const importedRoot = { ...root(), resultPath: path.join(tempDir, "root-run", "workflow-result.json") };
       writeJson(path.join(importedRoot.asyncDir, "status.json"), {
         runId: importedRoot.runId,
@@ -159,7 +165,7 @@ describe("async chain root attachment", () => {
       // leaving the real completed-step evidence intact until publication.
       const waiting = waitForImportedAsyncRoot(importedRoot);
       for (let poll = 0; poll < 3; poll++) {
-        t.mock.timers.tick(500);
+        vi.advanceTimersByTime(500);
         await Promise.resolve();
       }
       assert.equal(Date.now(), 1_500);
@@ -169,7 +175,7 @@ describe("async chain root attachment", () => {
         success: true,
         results: [{ agent: "worker", output: "published after step completion", success: true }],
       });
-      t.mock.timers.tick(500);
+      vi.advanceTimersByTime(500);
       const result = await waiting;
       assert.equal(result.success, true, result.error);
       assert.equal(result.output, "published after step completion");

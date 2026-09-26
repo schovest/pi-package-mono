@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import type { GhosttyRunner } from "../../src/inspectors/ghostty/actions.ts";
 import { createGhosttyInspectorPlugin } from "../../src/inspectors/ghostty/plugin.ts";
 import type { InspectorContext, InspectorLaunch, InspectorParams } from "../../src/inspectors/types.ts";

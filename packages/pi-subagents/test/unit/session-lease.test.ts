@@ -3,8 +3,8 @@ import { type ChildProcess, spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
+import { describe, it } from "vitest";
 import {
   SessionLeaseConflictError,
   acquireSessionLease,

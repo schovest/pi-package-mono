@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { decodeSessionRoots, encodeSessionRoots } from "../../src/inspectors/session-roots-codec.ts";
 import { formatShellCommand } from "../../src/inspectors/shell-command.ts";
 

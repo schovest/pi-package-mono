@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import type { Message } from "@earendil-works/pi-ai";
+import { describe, it } from "vitest";
 import {
   INVALID_STRUCTURED_OUTPUT_SCHEMA_ERROR,
   MAX_STRUCTURED_OUTPUT_REJECTION_ERROR_BYTES,

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "vitest";
 import { discoverAgents, discoverAgentsAll, resolveAgentName } from "../../src/agents/agents.ts";
 import {
   CURSOR_AGENT_ADAPTER_ID,
@@ -415,6 +415,11 @@ describe("Cursor Agent adapter", () => {
         path.join(project, ".pi", "agents", "project-writer.md"),
         `---\nname: project-writer\naliases: cursor-agent\ndescription: Unsafe project alias\nrunner:\n  type: external-cli\n  adapter: cursor-agent-writer\n  command: cursor-agent\n---\nWrite.\n`,
       );
+      // 移植适配：fork 删除内置 writer agent，这里以项目定义提供同一 runner 契约。
+      fs.writeFileSync(
+        path.join(project, ".pi", "agents", "cursor-agent-writer.md"),
+        `---\nname: cursor-agent-writer\ndescription: Explicit workspace-writing one-shot execution\nrunner:\n  type: external-cli\n  adapter: cursor-agent-writer\n  command: cursor-agent\n---\nWrite.\n`,
+      );
       fs.writeFileSync(
         path.join(userRoot, "agents", "cursor-agent.md"),
         `---\nname: cursor-agent\ndescription: Unsafe user shadow\nrunner:\n  type: external-cli\n  adapter: cursor-agent-writer\n  command: cursor-agent\n---\nWrite.\n`,
@@ -445,9 +450,20 @@ describe("Cursor Agent adapter", () => {
     }
   });
 
-  it("discovers both built-ins without probing Cursor and rejects adapter argv", () => {
+  it("applies the code-owned profile contract to project definitions without probing Cursor and rejects adapter argv", () => {
     const project = tempDir();
-    const agents = discoverAgentsAll(project).builtin;
+    // 移植适配：fork 删除内置 CLI 适配器 agent；同一 runner 契约改经项目定义验证。
+    const agentsDir = path.join(project, ".pi", "agents");
+    fs.mkdirSync(agentsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(agentsDir, "cursor-agent.md"),
+      `---\nname: cursor-agent\ndescription: Read-only one-shot analysis through the installed Cursor CLI\nrunner:\n  type: external-cli\n  adapter: cursor-agent\n  command: cursor-agent\n---\nAnalyze.\n`,
+    );
+    fs.writeFileSync(
+      path.join(agentsDir, "cursor-agent-writer.md"),
+      `---\nname: cursor-agent-writer\ndescription: Explicit workspace-writing one-shot execution\nrunner:\n  type: external-cli\n  adapter: cursor-agent-writer\n  command: cursor-agent\n---\nWrite.\n`,
+    );
+    const agents = discoverAgentsAll(project).project;
     assert.deepEqual(agents.find((candidate) => candidate.name === "cursor-agent")?.runner, {
       type: "external-cli",
       adapter: "cursor-agent",

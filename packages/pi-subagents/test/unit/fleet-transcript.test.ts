@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import { type MarkdownTheme, visibleWidth } from "@earendil-works/pi-tui";
+import { describe, it } from "vitest";
 import { readFleetTranscript, renderFleetTranscript } from "../../src/tui/fleet-transcript.ts";
 
 const theme = {

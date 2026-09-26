@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { createChildHooks } from "../../src/runs/shared/child-hooks.ts";
 import { buildInProcessChildLaunch } from "../../src/runs/shared/child-launch.ts";
 import {

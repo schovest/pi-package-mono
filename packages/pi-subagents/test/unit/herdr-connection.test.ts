@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as net from "node:net";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { HerdrRpcError, SocketRpcClient } from "../../src/runs/shared/herdr-connection.ts";
 
 async function withSocketServer<T>(

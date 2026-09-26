@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { buildWorkflowGraphSnapshot } from "../../src/runs/shared/workflow-graph.ts";
 
 describe("workflow graph snapshots", () => {

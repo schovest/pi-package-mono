@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
+import { describe, it } from "vitest";
 import {
   childCacheRetention,
   childCacheRetentionEnv,

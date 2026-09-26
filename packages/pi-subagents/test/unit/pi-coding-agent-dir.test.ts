@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { handleCreate } from "../../src/agents/agent-management.ts";
 import { discoverAgentsAll } from "../../src/agents/agents.ts";
 import { clearSkillCache, discoverAvailableSkills, resolveSkillPath } from "../../src/agents/skills.ts";

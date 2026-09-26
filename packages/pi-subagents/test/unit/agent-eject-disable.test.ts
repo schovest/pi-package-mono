@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { handleManagementAction } from "../../src/agents/agent-management.ts";
 import { discoverAgents, discoverAgentsAll } from "../../src/agents/agents.ts";
 import { clearSkillCache } from "../../src/agents/skills.ts";
@@ -346,22 +346,20 @@ describe("agent eject/disable/enable/reset management actions", () => {
     });
 
     it("retains a false machine clear so an inherited placement does not reactivate", () => {
+      // 移植适配：fork 删除了 claude-code builtin，改用保留的 scout 验证同一 reset 机制。
       const ctx = { cwd: tempDir, modelRegistry: { getAvailable: () => [] } };
       writeJson(userSettingsPath(), {
-        subagents: { agentOverrides: { "claude-code": { machine: "workmac" } } },
+        subagents: { agentOverrides: { scout: { machine: "workmac" } } },
       });
       writeJson(projectSettingsPath(), {
-        subagents: { agentOverrides: { "claude-code": { machine: false, model: "openai/gpt-5.4" } } },
+        subagents: { agentOverrides: { scout: { machine: false, model: "openai/gpt-5.4" } } },
       });
 
-      const reset = handleManagementAction("reset", { agent: "claude-code", agentScope: "project" }, ctx);
+      const reset = handleManagementAction("reset", { agent: "scout", agentScope: "project" }, ctx);
       assert.equal(reset.isError, false);
-      const settings = readJson(projectSettingsPath()) as { subagents: { agentOverrides: { "claude-code": unknown } } };
-      assert.deepEqual(settings.subagents.agentOverrides["claude-code"], { machine: false });
-      assert.equal(
-        discoverAgentsAll(tempDir).builtin.find((agent) => agent.name === "claude-code")?.machine,
-        undefined,
-      );
+      const settings = readJson(projectSettingsPath()) as { subagents: { agentOverrides: { scout: unknown } } };
+      assert.deepEqual(settings.subagents.agentOverrides["scout"], { machine: false });
+      assert.equal(discoverAgentsAll(tempDir).builtin.find((agent) => agent.name === "scout")?.machine, undefined);
     });
 
     it("removes both a custom file and a settings override in one reset", () => {

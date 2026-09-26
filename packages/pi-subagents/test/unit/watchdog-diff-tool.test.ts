@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import {
   WATCHDOG_DIFF_MAX_CHARS,
   captureWatchdogDiffBaseline,

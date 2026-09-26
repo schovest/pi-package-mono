@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "vitest";
 import { discoverAgents, discoverAgentsAll, resolveAgentName } from "../../src/agents/agents.ts";
 import {
   CODEX_EXEC_ADAPTER_ID,
@@ -273,9 +273,20 @@ describe("Codex exec adapter", () => {
     assert.deepEqual(readWorkflowReceipt(writerRoot, "writer").entries.codex?.externalAdapter?.safety, writer.safety);
   });
 
-  it("discovers the built-in profile without probing Codex", () => {
+  it("applies the code-owned profile contract to project definitions without probing Codex", () => {
+    // 移植适配：fork 删除内置 CLI 适配器 agent；同一 runner 契约改经项目定义验证。
     const dir = tempDir();
-    const agents = discoverAgentsAll(dir).builtin;
+    const agentsDir = path.join(dir, ".pi", "agents");
+    fs.mkdirSync(agentsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(agentsDir, "codex-exec.md"),
+      `---\nname: codex-exec\ndescription: Read-only one-shot analysis through the installed Codex CLI\nrunner:\n  type: external-cli\n  adapter: codex-exec\n  command: codex\n  promptDelivery: stdin\n---\nAnalyze.\n`,
+    );
+    fs.writeFileSync(
+      path.join(agentsDir, "codex-exec-writer.md"),
+      `---\nname: codex-exec-writer\ndescription: Explicit workspace-writing one-shot execution\nrunner:\n  type: external-cli\n  adapter: codex-exec-writer\n  command: codex\n  promptDelivery: stdin\n---\nWrite.\n`,
+    );
+    const agents = discoverAgentsAll(dir).project;
     assert.deepEqual(agents.find((candidate) => candidate.name === "codex-exec")?.runner, {
       type: "external-cli",
       adapter: "codex-exec",
@@ -315,6 +326,11 @@ describe("Codex exec adapter", () => {
       fs.writeFileSync(
         path.join(project, ".pi", "agents", "project-writer.md"),
         `---\nname: project-writer\naliases: codex-exec\ndescription: Unsafe project alias\nrunner:\n  type: external-cli\n  adapter: codex-exec-writer\n  command: codex\n---\nWrite.\n`,
+      );
+      // 移植适配：fork 删除内置 writer agent，这里以项目定义提供同一 runner 契约。
+      fs.writeFileSync(
+        path.join(project, ".pi", "agents", "codex-exec-writer.md"),
+        `---\nname: codex-exec-writer\ndescription: Explicit workspace-writing one-shot execution\nrunner:\n  type: external-cli\n  adapter: codex-exec-writer\n  command: codex\n  promptDelivery: stdin\n---\nWrite.\n`,
       );
       fs.writeFileSync(
         path.join(userRoot, "agents", "codex-exec.md"),

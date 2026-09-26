@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it, onTestFinished } from "vitest";
 import type { AsyncRunSummary } from "../../src/runs/background/async-status.ts";
 import { writeCompletionReplay } from "../../src/runs/background/completion-replay.ts";
 import { writeAsyncResultFile } from "../../src/runs/background/result-files.ts";
@@ -16,7 +16,7 @@ import type { SubagentState, WaitCompletion } from "../../src/shared/types.ts";
 describe("workflow wait completion projection", () => {
   it("returns readable evidence references from the matched result namespace and its replay", (t) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-evidence-"));
-    t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
     const resultsDir = path.join(root, "nested", "root-run");
     const runId = "persona";
     const data = { runId, sessionId: "owner", results: [{ agent: "persona", output: "NESTED_FINDING" }] };
@@ -65,7 +65,7 @@ describe("workflow wait completion projection", () => {
 
   it("only references an unindexed public fallback owned by the completed run session", (t) => {
     const resultsDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-public-fallback-"));
-    t.after(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
     const runId = "shared-run";
     const terminal: AsyncRunSummary[] = [
       {
@@ -120,7 +120,7 @@ describe("workflow wait completion projection", () => {
 
   it("does not surface an in-memory completion after the run id is reused by another session", (t) => {
     const resultsDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-memory-owner-"));
-    t.after(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
     const runId = "shared-run";
     const state = { currentSessionId: "session-b" } as SubagentState;
     assert.equal(
@@ -153,7 +153,7 @@ describe("workflow wait completion projection", () => {
 
   it("owner-gates the in-memory completion discovered during the result-file race", (t) => {
     const resultsDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-late-memory-owner-"));
-    t.after(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
     const runId = "shared-run";
     const completion = toWaitCompletion({ agent: "recorded-agent", success: true }, runId);
     const entry = { sessionId: "session-a", seenAt: Date.now(), completion };
@@ -176,7 +176,7 @@ describe("workflow wait completion projection", () => {
 
   it("refuses to record a completion without matching payload and persistence ownership", (t) => {
     const resultsDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-record-owner-"));
-    t.after(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
     const state = { currentSessionId: "session-a" } as SubagentState;
 
     assert.equal(recordWaitCompletion(state, "missing", { runId: "missing" }, Date.now(), 60_000), false);
@@ -214,7 +214,7 @@ describe("workflow wait completion projection", () => {
 
   it("rejects foreign unindexed public payloads before the watcher records completion", (t) => {
     const resultsDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-public-prewatcher-"));
-    t.after(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
     const runId = "shared-run";
     const terminal: AsyncRunSummary[] = [
       {
@@ -263,7 +263,7 @@ describe("workflow wait completion projection", () => {
 
   it("validates stale indexed public payload ownership with and without memory", (t) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-stale-index-"));
-    t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
     for (const hasMemory of [false, true]) {
       for (const payloadOwner of ["owner", "foreign"]) {
         const resultsDir = path.join(root, `${hasMemory ? "memory" : "no-memory"}-${payloadOwner}`);
@@ -318,7 +318,7 @@ describe("workflow wait completion projection", () => {
 
   it("reports malformed indexed payloads", (t) => {
     const resultsDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-wait-malformed-indexed-"));
-    t.after(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(resultsDir, { recursive: true, force: true }));
     const runId = "malformed-run";
     const resultPath = path.join(resultsDir, `${runId}.json`);
     writeAsyncResultFile(resultPath, { runId, sessionId: "owner", agent: "initial-owner" });

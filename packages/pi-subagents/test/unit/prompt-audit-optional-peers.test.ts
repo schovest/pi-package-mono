@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { test } from "vitest";
 
 const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
 

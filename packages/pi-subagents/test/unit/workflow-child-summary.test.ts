@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { it } from "node:test";
+import { it } from "vitest";
 import type { AgentProgress } from "../../src/shared/types.ts";
 import {
   parseWorkflowChildSummary,

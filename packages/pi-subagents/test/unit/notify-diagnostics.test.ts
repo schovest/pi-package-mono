@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { it } from "node:test";
 import { fileURLToPath } from "node:url";
+import { it } from "vitest";
 
 it("traces bounded completion reasons through NODE_DEBUG without changing delivery", () => {
   const run = (debug: string) => {

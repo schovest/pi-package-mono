@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { afterEach, describe, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { createAssistantMessageEventStream } from "@earendil-works/pi-ai";
 import { fauxAssistantMessage } from "@earendil-works/pi-ai/providers/faux";
 import { type MarkdownTheme, visibleWidth } from "@earendil-works/pi-tui";
@@ -2110,7 +2116,7 @@ describe("native subagent fleet", () => {
   });
 
   it("periodically redraws only while the overlay remains open", (t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
     const state = stateForTest();
     let renderRequests = 0;
     let closed = false;
@@ -2129,18 +2135,18 @@ describe("native subagent fleet", () => {
       },
       { refreshMs: 10 },
     );
-    t.mock.timers.tick(249);
+    vi.advanceTimersByTime(249);
     assert.equal(renderRequests, 0, "refresh cadence is bounded away from a hot loop");
-    t.mock.timers.tick(1);
+    vi.advanceTimersByTime(1);
     assert.equal(renderRequests, 1);
     component.handleInput("\x1b");
     assert.equal(closed, true);
-    t.mock.timers.tick(1_000);
+    vi.advanceTimersByTime(1_000);
     assert.equal(renderRequests, 1, "closing cancels periodic redraws");
 
     const disposed = new SubagentFleetComponent(tui as never, theme as never, state, () => {}, { refreshMs: 250 });
     disposed.dispose();
-    t.mock.timers.tick(1_000);
+    vi.advanceTimersByTime(1_000);
     assert.equal(renderRequests, 1, "disposing cancels periodic redraws");
   });
 

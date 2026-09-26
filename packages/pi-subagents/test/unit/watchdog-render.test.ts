@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { formatWatchdogWarningRenderText } from "../../src/watchdog/render.ts";
 import { SUBAGENT_WATCHDOG_WARNING_TYPE, type WatchdogWarningDetails } from "../../src/watchdog/types.ts";
 import { createWatchdogWarningMessage, formatWatchdogWarningContent } from "../../src/watchdog/warning-format.ts";

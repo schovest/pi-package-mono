@@ -3,7 +3,13 @@ import fsDefault, * as fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { releaseActiveRunIndex, updateActiveRunIndex } from "../../src/runs/background/active-run-index.ts";
 import {
   resultFilePath,
@@ -344,7 +350,7 @@ describe("subagent run id resolver", () => {
         success: true,
       });
 
-      t.mock.method(fsDefault, "renameSync", () => {
+      vi.spyOn(fsDefault, "renameSync").mockImplementation(() => {
         const error = new Error("destination exists") as NodeJS.ErrnoException;
         error.code = "EEXIST";
         throw error;
@@ -363,7 +369,7 @@ describe("subagent run id resolver", () => {
       assert.equal(JSON.parse(fs.readFileSync(pendingPath, "utf-8")).success, true);
       assert.equal(JSON.parse(fs.readFileSync(resultPath, "utf-8")).success, false);
     } finally {
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
       fs.rmSync(root, { recursive: true, force: true });
     }

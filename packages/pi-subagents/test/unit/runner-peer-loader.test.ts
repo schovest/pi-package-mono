@@ -3,8 +3,8 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { test } from "node:test";
 import { pathToFileURL } from "node:url";
+import { test } from "vitest";
 
 const loaderUrl = new URL("../../runner-peer-loader.mjs", import.meta.url);
 const packageRootUrl = new URL("../../", import.meta.url).href;

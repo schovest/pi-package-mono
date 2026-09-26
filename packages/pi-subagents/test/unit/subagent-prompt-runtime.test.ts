@@ -4,7 +4,13 @@ import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { afterEach, describe, it, onTestFinished, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { updateActiveRunIndex } from "../../src/runs/background/active-run-index.ts";
 import type { ChildRuntimeConfig } from "../../src/runs/shared/child-runtime-config.ts";
 import { createNestedRoute, nestedResultsPath } from "../../src/runs/shared/nested-events.ts";
@@ -163,10 +169,10 @@ it("does not grant nested wait access for an invalid inherited route", async (t)
   const runId = randomUUID();
   const root = path.join(TEMP_ROOT_DIR, "nested-subagent-runs", route.rootRunId);
   const dir = path.join(root, runId);
-  t.after(() => {
+  onTestFinished(() => {
     for (const entry of [root, path.dirname(route.eventSink)]) fs.rmSync(entry, { recursive: true, force: true });
   });
-  t.mock.method(console, "error", () => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
     path.join(dir, "status.json"),
@@ -335,7 +341,7 @@ describe("subagent prompt runtime", () => {
   it("registers a requested watchdog_diff at launch HEAD and reports unavailable baseline outside Git", async (t) => {
     const repo = fs.mkdtempSync(path.join(os.tmpdir(), "reviewer-runtime-diff-"));
     const outside = fs.mkdtempSync(path.join(os.tmpdir(), "reviewer-runtime-no-git-"));
-    t.after(() => {
+    onTestFinished(() => {
       fs.rmSync(repo, { recursive: true, force: true });
       fs.rmSync(outside, { recursive: true, force: true });
     });

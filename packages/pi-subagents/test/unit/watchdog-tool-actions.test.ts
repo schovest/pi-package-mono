@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { MainWatchdogRuntime } from "../../src/watchdog/runtime.ts";
 import { handleWatchdogToolAction } from "../../src/watchdog/tool-actions.ts";
 

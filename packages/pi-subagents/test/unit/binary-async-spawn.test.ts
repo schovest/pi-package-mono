@@ -4,7 +4,13 @@ import fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import test from "node:test";
+import { afterEach, test, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { executeAsyncChain, executeAsyncSingle } from "../../src/runs/background/async-execution.ts";
 import { makeAgent } from "../support/helpers.ts";
 
@@ -28,12 +34,14 @@ for (const [entry, missingBootstrap] of [
     process.env.PI_SUBAGENTS_PI_CODING_AGENT_PACKAGE_ROOT = "/stale/npm-root";
     process.env.JITI_ALIAS = '{"stale":"alias"}';
     process.env.PI_SUBAGENT_PARENT_SESSION = "ambient-other-root";
-    const spawn = t.mock.method(childProcess, "spawn", () => {
+    const spawn = vi.spyOn(childProcess, "spawn").mockImplementation(() => {
       throw new Error("captured binary spawn");
     });
     if (missingBootstrap) {
       const exists = fs.existsSync;
-      t.mock.method(fs, "existsSync", (file) => (String(file).endsWith("binary-bootstrap.ts") ? false : exists(file)));
+      vi.spyOn(fs, "existsSync").mockImplementation((file) =>
+        String(file).endsWith("binary-bootstrap.ts") ? false : exists(file),
+      );
     }
     syncBuiltinESMExports();
     try {
@@ -58,11 +66,11 @@ for (const [entry, missingBootstrap] of [
       assert.equal(result.isError, true);
       if (missingBootstrap) {
         assert.match(result.content[0]!.text, /Background runner bootstrap not found/);
-        assert.equal(spawn.mock.callCount(), 0);
+        assert.equal(spawn.mock.calls.length, 0);
       } else {
         assert.match(result.content[0]!.text, /captured binary spawn/);
-        assert.equal(spawn.mock.callCount(), 1, "no alternate runtime retry");
-        const [command, args, options] = spawn.mock.calls[0]!.arguments;
+        assert.equal(spawn.mock.calls.length, 1, "no alternate runtime retry");
+        const [command, args, options] = spawn.mock.calls[0]!;
         assert.equal(command, process.env.PI_SUBAGENT_PI_BINARY);
         assert.deepEqual(args.slice(0, -1), [
           "--no-extensions",
@@ -101,8 +109,8 @@ for (const [entry, missingBootstrap] of [
           acceptance: false,
         });
         assert.match(withoutParent.content[0]!.text, /captured binary spawn/);
-        assert.equal(spawn.mock.callCount(), 2);
-        assert.equal(spawn.mock.calls[1]!.arguments[2].env.PI_SUBAGENT_PARENT_SESSION, undefined);
+        assert.equal(spawn.mock.calls.length, 2);
+        assert.equal(spawn.mock.calls[1]![2].env.PI_SUBAGENT_PARENT_SESSION, undefined);
 
         const attached = executeAsyncChain("binary-attached", {
           chain: [{ agent: "worker", task: "Continue" }],
@@ -133,8 +141,8 @@ for (const [entry, missingBootstrap] of [
           maxSubagentDepth: 1,
         });
         assert.match(attached.content[0]!.text, /captured binary spawn/);
-        assert.equal(spawn.mock.callCount(), 3);
-        const attachedOptions = spawn.mock.calls[2]!.arguments[2];
+        assert.equal(spawn.mock.calls.length, 3);
+        const attachedOptions = spawn.mock.calls[2]![2];
         assert.equal(attachedOptions.env.PI_SUBAGENT_PARENT_SESSION, "attach-parent");
         const attachedConfig = JSON.parse(fs.readFileSync(attachedOptions.env.PI_SUBAGENT_RUNNER_CONFIG, "utf-8"));
         assert.deepEqual(
@@ -175,10 +183,10 @@ for (const [entry, missingBootstrap] of [
         });
         assert.equal(inconsistent.isError, true);
         assert.match(inconsistent.content[0]!.text, /inconsistent parent session identities/);
-        assert.equal(spawn.mock.callCount(), 3, "inconsistent real or synthetic parents must fail before spawn");
+        assert.equal(spawn.mock.calls.length, 3, "inconsistent real or synthetic parents must fail before spawn");
       }
     } finally {
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
       process.argv[1] = argv1;
       if (bun) Object.defineProperty(process.versions, "bun", bun);

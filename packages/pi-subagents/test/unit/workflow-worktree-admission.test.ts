@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { it } from "node:test";
+import { it } from "vitest";
 import { preflightWorkflowWorktrees } from "../../src/runs/foreground/subagent-executor.ts";
 
 it("rechecks effective relative sources after changes without applying fresh defaults to retained resumes", async () => {

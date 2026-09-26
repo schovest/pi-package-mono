@@ -3,8 +3,8 @@ import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, it } from "node:test";
 import { Worker } from "node:worker_threads";
+import { describe, it, onTestFinished } from "vitest";
 import { preflightWorkflowWorktrees } from "../../src/runs/foreground/subagent-executor.ts";
 import {
   claimRunFanoutBatch,
@@ -815,7 +815,7 @@ describe("scripted workflow runtime", () => {
 
   it("resolves a keyed workflow receipt despite an invalid current worktree source", async (t) => {
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "pi-receipt-resume-"));
-    t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(cwd, { recursive: true, force: true }));
     let launchParams: Record<string, unknown> | undefined;
     let resolvedReference: unknown;
     const result = await runWorkflowScript({
@@ -4140,7 +4140,7 @@ describe("scripted workflow runtime", () => {
 
   it("classifies admission subprocess cancellation on workflow timeout as stopped", { timeout: 5_000 }, async (t) => {
     const budget = createRunFanoutBudget("admission-timeout", 1);
-    t.after(() => fs.rmSync(budget.directory, { recursive: true, force: true }));
+    onTestFinished(() => fs.rmSync(budget.directory, { recursive: true, force: true }));
     let spawned = false;
     let launches = 0;
     let childSettled!: (result: { outcome: string; error?: string }) => void;

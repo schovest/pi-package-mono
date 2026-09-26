@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import {
   type AssistantMessage,
@@ -16,6 +15,7 @@ import {
   getCurrentTools,
 } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
+import { describe, it } from "vitest";
 import { WATCHDOG_GUIDANCE_MAX_CHARS } from "../../src/watchdog/guidance.ts";
 import { buildWatchdogStatus } from "../../src/watchdog/register-main.ts";
 import { createMainWatchdogReview, resolveWatchdogReviewModel } from "../../src/watchdog/review.ts";

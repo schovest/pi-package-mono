@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import { pathToFileURL } from "node:url";
+import { describe, it } from "vitest";
 import { ASYNC_RETENTION_BATCH_SIZE, cleanupAsyncRetention } from "../../src/runs/background/async-retention.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

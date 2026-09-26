@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 
 import { visibleWidth } from "@earendil-works/pi-tui";
 import type { AsyncJobState } from "../../src/shared/types.ts";

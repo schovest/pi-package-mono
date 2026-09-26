@@ -4,7 +4,13 @@ import * as fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { executeAsyncSingle } from "../../src/runs/background/async-execution.ts";
 import { readAsyncRecoveryDescriptor } from "../../src/runs/background/async-resume.ts";
 import { createRunFanoutBudget } from "../../src/runs/shared/run-fanout-budget.ts";
@@ -28,7 +34,7 @@ describe("async recovery descriptor", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "pi-async-recovery-allowed-agents-"));
     const runId = `recovery-allowed-agents-${Date.now().toString(36)}`;
     const asyncDir = path.join(DIRS.async, runId);
-    const spawn = t.mock.method(childProcess, "spawn", () => {
+    const spawn = vi.spyOn(childProcess, "spawn").mockImplementation(() => {
       throw new Error("captured detached spawn");
     });
     syncBuiltinESMExports();
@@ -52,10 +58,10 @@ describe("async recovery descriptor", () => {
         acceptance: false,
       });
       assert.equal(result.isError, true);
-      assert.equal(spawn.mock.callCount(), 1);
+      assert.equal(spawn.mock.calls.length, 1);
       assert.deepEqual(readAsyncRecoveryDescriptor(asyncDir)?.allowedAgents, []);
     } finally {
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
       fs.rmSync(root, { recursive: true, force: true });
       fs.rmSync(asyncDir, { recursive: true, force: true });

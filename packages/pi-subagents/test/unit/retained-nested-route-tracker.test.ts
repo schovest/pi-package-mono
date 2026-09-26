@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { retainLiveForegroundNestedRoute } from "../../src/integrations/pi-web-session-liveness.ts";
 import { createRetainedNestedRouteTracker } from "../../src/runs/background/retained-nested-route-tracker.ts";
 import { createNestedRoute, writeNestedEvent } from "../../src/runs/shared/nested-events.ts";
@@ -133,7 +139,7 @@ describe("retained foreground nested route tracker", () => {
   });
 
   it("refreshes promptly from native watch events", (t) => {
-    t.mock.timers.enable({ apis: ["setTimeout"] });
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
     const state: Pick<SubagentState, "retainedForegroundNestedRoutes"> = {};
     const nestedRoute = route("watched-root");
     writeState(nestedRoute, "running", 100);
@@ -156,11 +162,11 @@ describe("retained foreground nested route tracker", () => {
     });
     try {
       tracker.track(nestedRoute.rootRunId);
-      t.mock.timers.tick(25);
+      vi.advanceTimersByTime(25);
       assert.equal(state.retainedForegroundNestedRoutes?.has(nestedRoute.rootRunId), true);
       writeState(nestedRoute, "complete", 200);
       notify?.();
-      t.mock.timers.tick(25);
+      vi.advanceTimersByTime(25);
       assert.equal(state.retainedForegroundNestedRoutes?.has(nestedRoute.rootRunId), false);
       assert.equal(closed, 1);
     } finally {

@@ -3,8 +3,8 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { it } from "node:test";
 import { Type } from "typebox";
+import { it } from "vitest";
 import { registerMainWatchdog } from "../../src/watchdog/register-main.ts";
 import { createMainWatchdogReview } from "../../src/watchdog/review.ts";
 

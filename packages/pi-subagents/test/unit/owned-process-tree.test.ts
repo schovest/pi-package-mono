@@ -3,7 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import test from "node:test";
+import { test } from "vitest";
 import { createOwnedProcessTreeController } from "../../src/runs/background/owned-process-tree.ts";
 
 function processIsActive(pid: number): boolean {

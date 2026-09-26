@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { normalizePublicSubagentExecution } from "../../src/extension/public-execution.ts";
 
 describe("public subagent execution normalization", () => {

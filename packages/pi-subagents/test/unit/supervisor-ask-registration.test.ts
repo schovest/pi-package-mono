@@ -1,3 +1,5 @@
+import { afterEach, describe, it, vi } from "vitest";
+
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -5,7 +7,6 @@ import fsDefault, * as fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { type TestContext, afterEach, describe, it } from "node:test";
 import {
   NATIVE_SUPERVISOR_TOOL_NAME,
   createNativeSupervisorChannel,
@@ -235,31 +236,31 @@ function hookRuntime(launch: ChildSessionLaunch, platform: NodeJS.Platform, sign
   };
 }
 
-function captureSupervisorPolling(t: TestContext, allowedDirs: Set<string>) {
+function captureSupervisorPolling(allowedDirs: Set<string>) {
   const intervals = new Map<object, () => void>();
   const scans: string[] = [];
   const watches: string[] = [];
   let starts = 0;
   const set = globalThis.setInterval;
   const clear = globalThis.clearInterval;
-  t.mock.method(globalThis, "setInterval", ((handler: () => void, delay: number, ...args: unknown[]) => {
+  vi.spyOn(globalThis, "setInterval").mockImplementation(((handler: () => void, delay: number, ...args: unknown[]) => {
     if (delay !== 250) return set(handler, delay, ...args);
     starts++;
     const token = { unref() {} };
     intervals.set(token, handler);
     return token;
   }) as typeof setInterval);
-  t.mock.method(globalThis, "clearInterval", ((token: ReturnType<typeof setInterval>) => {
+  vi.spyOn(globalThis, "clearInterval").mockImplementation(((token: ReturnType<typeof setInterval>) => {
     if (!intervals.delete(token)) clear(token);
   }) as typeof clearInterval);
   const channelRoot = path.dirname(resolveSupervisorChannelDir("fixture", "worker", 0));
   const readdir = fsDefault.readdirSync;
   const watch = fsDefault.watch;
-  t.mock.method(fsDefault, "readdirSync", ((dir: fs.PathLike, options: unknown) => {
+  vi.spyOn(fsDefault, "readdirSync").mockImplementation(((dir: fs.PathLike, options: unknown) => {
     if (String(dir).startsWith(channelRoot)) scans.push(String(dir));
     return (readdir as (dir: fs.PathLike, options: unknown) => unknown)(dir, options);
   }) as typeof fsDefault.readdirSync);
-  t.mock.method(fsDefault, "watch", ((dir: fs.PathLike, ...args: unknown[]) => {
+  vi.spyOn(fsDefault, "watch").mockImplementation(((dir: fs.PathLike, ...args: unknown[]) => {
     if (String(dir).startsWith(channelRoot)) watches.push(String(dir));
     return (watch as (dir: fs.PathLike, ...args: unknown[]) => fs.FSWatcher)(dir, ...args);
   }) as typeof fsDefault.watch);
@@ -278,7 +279,7 @@ function captureSupervisorPolling(t: TestContext, allowedDirs: Set<string>) {
       for (const dir of scans) assert.ok(allowedDirs.has(dir), `Unexpected supervisor scan: ${dir}`);
     },
     restore() {
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
     },
   };
@@ -286,7 +287,7 @@ function captureSupervisorPolling(t: TestContext, allowedDirs: Set<string>) {
 
 describe("supervisor ask registration", () => {
   for (const platform of ["darwin", "win32", "linux"] as const) {
-    it(`drains foreground and workflow progress completed between ticks exactly once (${platform})`, async (t) => {
+    it(`drains foreground and workflow progress completed between ticks exactly once (${platform})`, async () => {
       const root = fs.mkdtempSync(path.join(os.tmpdir(), "nested-final-progress-"));
       const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
       process.env.PI_CODING_AGENT_DIR = root;
@@ -309,7 +310,7 @@ describe("supervisor ask registration", () => {
       const abort = new AbortController();
       const runtime = hookRuntime(launch.session, platform, abort.signal);
       const allowed = new Set<string>();
-      const polling = captureSupervisorPolling(t, allowed);
+      const polling = captureSupervisorPolling(allowed);
       const leaves: ReturnType<typeof hookRuntime>[] = [];
       setChildSessionFactory({
         async create(childLaunch) {
@@ -417,7 +418,7 @@ describe("supervisor ask registration", () => {
       });
       const runtime = hookRuntime(launch.session, platform, new AbortController().signal);
       const allowed = new Set<string>();
-      const polling = captureSupervisorPolling(t, allowed);
+      const polling = captureSupervisorPolling(allowed);
       try {
         await runtime.emit("session_start");
         assert.equal(polling.intervals.size, 0);

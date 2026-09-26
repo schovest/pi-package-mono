@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import type { AsyncJobState, NestedRunSummary } from "../../src/shared/types.ts";
 import { buildWidgetLines, widgetRenderKey } from "../../src/tui/render.ts";
 

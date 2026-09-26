@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import test from "node:test";
+import { test } from "vitest";
 
 test("Unreleased changelog uses each subsection once", () => {
   const changelog = fs.readFileSync(new URL("../../CHANGELOG.md", import.meta.url), "utf8");

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { reconcileAttemptUsage } from "../../src/runs/shared/usage-reconciliation.ts";
 import type { Usage } from "../../src/shared/types.ts";
 

@@ -3,8 +3,8 @@ import { execFileSync, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, it } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
   buildSkillInjection,
   clearSkillCache,
@@ -45,17 +45,13 @@ type SkillsModule = typeof import("../../src/agents/skills.ts");
 type AgentsModule = typeof import("../../src/agents/agents.ts");
 
 async function importSkillsFresh() {
-  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-  const modulePath = path.resolve(projectRoot, "src/agents/skills.ts");
-  const bust = `${Date.now()}-${Math.random()}`;
-  return (await import(`${pathToFileURL(modulePath).href}?bust=${bust}`)) as SkillsModule;
+  vi.resetModules();
+  return (await import("../../src/agents/skills.ts")) as SkillsModule;
 }
 
 async function importAgentsFresh() {
-  const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-  const modulePath = path.resolve(projectRoot, "src/agents/agents.ts");
-  const bust = `${Date.now()}-${Math.random()}`;
-  return (await import(`${pathToFileURL(modulePath).href}?bust=${bust}`)) as AgentsModule;
+  vi.resetModules();
+  return (await import("../../src/agents/agents.ts")) as AgentsModule;
 }
 
 describe("skills filesystem fallback", () => {

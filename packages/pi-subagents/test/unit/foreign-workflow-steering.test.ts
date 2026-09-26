@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { it } from "node:test";
+import { it } from "vitest";
 import { closeSteerInbox, steerRequestsDir } from "../../src/runs/background/control-channel.ts";
 import { steerWorkflowRun } from "../../src/runs/foreground/workflow-foreground-steering.ts";
 import { currentCompletionOwnerId } from "../../src/shared/completion-owner.ts";

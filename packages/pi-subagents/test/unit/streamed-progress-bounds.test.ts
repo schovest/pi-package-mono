@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import {
   MAX_STREAMED_OUTPUT_LINE_CHARS,
   MAX_STREAMED_RECENT_TOOLS,

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { rewriteFastModeProviderRequest } from "../../src/runs/shared/fast-mode-extension.ts";
 
 describe("fast mode provider request", () => {

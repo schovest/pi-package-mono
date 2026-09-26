@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import { createRequire, syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import type { AsyncRunSummary } from "../../src/runs/background/async-status.ts";
 import {
   cleanupCompletionReplay,

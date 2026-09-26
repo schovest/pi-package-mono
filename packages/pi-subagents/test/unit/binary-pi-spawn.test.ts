@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { resolveBunPiExecutable } from "../../src/runs/shared/pi-spawn.ts";
 
 for (const [argv1, execPath] of [

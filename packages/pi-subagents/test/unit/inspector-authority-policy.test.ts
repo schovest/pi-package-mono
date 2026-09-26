@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { createSubagentExecutor } from "../../src/runs/foreground/subagent-executor.ts";
 import type { AuthorityPolicyConfig, SubagentState } from "../../src/shared/types.ts";
 

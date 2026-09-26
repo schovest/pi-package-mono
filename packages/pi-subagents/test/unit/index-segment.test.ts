@@ -3,7 +3,13 @@ import fsDefault, * as fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { afterEach, describe, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import {
   ACTIVE_RUN_INDEX_DIR,
   readActiveRunToolCallIndex,
@@ -71,7 +77,7 @@ describe("bounded index segments", () => {
   it("throws non-missing tool-call index read failures", (t) => {
     const error = new Error("permission denied") as NodeJS.ErrnoException;
     error.code = "EACCES";
-    t.mock.method(fsDefault, "readdirSync", () => {
+    vi.spyOn(fsDefault, "readdirSync").mockImplementation(() => {
       throw error;
     });
     syncBuiltinESMExports();
@@ -81,7 +87,7 @@ describe("bounded index segments", () => {
         (thrown) => thrown === error,
       );
     } finally {
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
     }
   });
@@ -124,7 +130,7 @@ describe("bounded index segments", () => {
   it("surfaces unrelated ENAMETOOLONG errors from status inspection", (t) => {
     const error = new Error("unrelated status path too long") as NodeJS.ErrnoException;
     error.code = "ENAMETOOLONG";
-    t.mock.method(fsDefault, "statSync", () => {
+    vi.spyOn(fsDefault, "statSync").mockImplementation(() => {
       throw error;
     });
     syncBuiltinESMExports();
@@ -137,7 +143,7 @@ describe("bounded index segments", () => {
           (thrown as Error & { cause?: unknown }).cause === error,
       );
     } finally {
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
     }
   });
@@ -151,7 +157,7 @@ describe("bounded index segments", () => {
     try {
       fs.mkdirSync(asyncDir);
       fs.writeFileSync(statusPath, "{}", "utf-8");
-      t.mock.method(fsDefault, "readFileSync", () => {
+      vi.spyOn(fsDefault, "readFileSync").mockImplementation(() => {
         throw error;
       });
       syncBuiltinESMExports();
@@ -163,7 +169,7 @@ describe("bounded index segments", () => {
           (thrown as Error & { cause?: unknown }).cause === error,
       );
     } finally {
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
       fs.rmSync(root, { recursive: true, force: true });
     }

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import type { SingleResult, Usage } from "../../src/shared/types.ts";
 import { sumResultsCost, sumResultsUsage } from "../../src/shared/utils.ts";
 

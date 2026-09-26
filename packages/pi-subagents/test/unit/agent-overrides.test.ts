@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import {
   buildBuiltinOverrideConfig,
   discoverAgents,
@@ -96,24 +96,25 @@ describe("builtin agent overrides", () => {
     writeJson(path.join(tempHome, ".pi", "agent", "settings.json"), {
       subagents: {
         agentOverrides: {
-          "claude-code": { machine: "workmac" },
-          "codex-exec": { machine: "workmac" },
-          "cursor-agent": { machine: "workmac" },
+          // 移植适配：fork 删除了 claude-code/codex-exec/cursor-agent builtin，改用保留 builtin 验证同一机制。
+          scout: { machine: "workmac" },
+          worker: { machine: "workmac" },
+          reviewer: { machine: "workmac" },
         },
       },
     });
     writeJson(path.join(tempProject, ".pi", "settings.json"), {
-      subagents: { agentOverrides: { "codex-exec": { machine: "gpu-box" }, "cursor-agent": { machine: false } } },
+      subagents: { agentOverrides: { worker: { machine: "gpu-box" }, reviewer: { machine: false } } },
     });
 
     const builtins = discoverAgentsAll(tempProject).builtin;
-    assert.equal(builtins.find((agent) => agent.name === "claude-code")?.machine, "workmac");
-    assert.equal(builtins.find((agent) => agent.name === "codex-exec")?.machine, "gpu-box");
-    assert.equal(builtins.find((agent) => agent.name === "cursor-agent")?.machine, undefined);
-    assert.deepEqual(builtins.find((agent) => agent.name === "cursor-agent")?.override?.fields, ["machine"]);
+    assert.equal(builtins.find((agent) => agent.name === "scout")?.machine, "workmac");
+    assert.equal(builtins.find((agent) => agent.name === "worker")?.machine, "gpu-box");
+    assert.equal(builtins.find((agent) => agent.name === "reviewer")?.machine, undefined);
+    assert.deepEqual(builtins.find((agent) => agent.name === "reviewer")?.override?.fields, ["machine"]);
 
     // The disable/reset rewrite keeps a placement: the override is rebuilt from the agent's current fields.
-    const claude = builtins.find((agent) => agent.name === "claude-code")!;
+    const claude = builtins.find((agent) => agent.name === "scout")!;
     assert.deepEqual(buildBuiltinOverrideConfig({ ...claude.override!.base }, { ...claude }), { machine: "workmac" });
     assert.deepEqual(
       buildBuiltinOverrideConfig({ ...claude.override!.base, machine: "pinned" }, { ...claude, machine: undefined }),

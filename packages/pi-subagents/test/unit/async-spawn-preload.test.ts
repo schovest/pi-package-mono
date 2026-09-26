@@ -4,7 +4,13 @@ import * as fs from "node:fs";
 import * as nodeModule from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import test from "node:test";
+import { afterEach, test, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { fileURLToPath } from "node:url";
 import { PI_CODING_AGENT_PACKAGE_ROOT_ENV } from "../../src/shared/utils.ts";
 
@@ -44,7 +50,7 @@ test("executeAsyncSingle preloads all peer aliases before the selected runner lo
     // also loads async-execution. Set the host before importing that graph.
     const { makeAgent } = await import("../support/helpers.ts");
     const { executeAsyncSingle } = await import("../../src/runs/background/async-execution.ts");
-    const spawn = t.mock.method(childProcess, "spawn", () => {
+    const spawn = vi.spyOn(childProcess, "spawn").mockImplementation(() => {
       // Stop at the only external I/O seam: no fake pid or detached lifecycle.
       throw new Error("spawn boundary captured");
     });
@@ -86,12 +92,12 @@ test("executeAsyncSingle preloads all peer aliases before the selected runner lo
       assert.equal(result.isError, true);
       if (scenario === "missing-pre-chord") {
         assert.match(result.content[0]!.text, /@earendil-works\/pi-agent-core\/node/);
-        assert.equal(spawn.mock.callCount(), 2);
+        assert.equal(spawn.mock.calls.length, 2);
         continue;
       }
       assert.match(result.content[0]!.text, /spawn boundary captured/);
-      assert.equal(spawn.mock.callCount(), scenario === "stable" ? 1 : 2);
-      const [command, args, options] = spawn.mock.calls.at(-1)!.arguments;
+      assert.equal(spawn.mock.calls.length, scenario === "stable" ? 1 : 2);
+      const [command, args, options] = spawn.mock.calls.at(-1)!;
       assert.ok(path.isAbsolute(command));
       assert.equal(options.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV], host);
       const actualAliases = JSON.parse(options.env.JITI_ALIAS) as Record<string, string>;
@@ -110,7 +116,7 @@ test("executeAsyncSingle preloads all peer aliases before the selected runner lo
       assert.equal(options.env.PI_ASYNC_NATIVE_RUNNER, nativeRunner ? "1" : "0");
     }
   } finally {
-    t.mock.restoreAll();
+    vi.restoreAllMocks();
     nodeModule.syncBuiltinESMExports();
     if (originalArgv1 === undefined) delete process.argv[1];
     else process.argv[1] = originalArgv1;

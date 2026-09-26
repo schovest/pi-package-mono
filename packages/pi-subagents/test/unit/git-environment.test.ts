@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { omitGitRoutingEnv } from "../../src/runs/shared/git-environment.ts";
 
 const GIT_ROUTING_ENV = {
