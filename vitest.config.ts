@@ -25,6 +25,9 @@ export default defineConfig({
       {
         test: {
           name: "pi-subagents",
+          // 移植适配：集成测试重度 spawn 子进程，并行跑文件会互相争抢导致超时型 flake，
+          // 改为串行执行文件（单文件内用例仍按定义顺序执行）。
+          fileParallelism: false,
           include: ["packages/pi-subagents/test/**/*.test.ts", "packages/pi-subagents/ship-manifest.test.ts"],
           setupFiles: ["./packages/pi-subagents/test/support/vitest.setup.ts"],
           hookTimeout: 60_000,
