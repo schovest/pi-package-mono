@@ -52,7 +52,8 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
 
   it(
     "coalesces ordinary background status while publishing per-child activity transitions",
-    { timeout: 30_000, skip: !isAsyncAvailable() ? "jiti not available" : undefined },
+    // 移植适配：monorepo 下子进程冷启动更慢，放宽超时。
+    { timeout: 300_000, skip: !isAsyncAvailable() ? "jiti not available" : undefined },
     async (t) => {
       const id = `async-coalescing-${Date.now().toString(36)}`;
       const statusPath = path.join(ASYNC_DIR, id, "status.json");
@@ -65,6 +66,7 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
         `
 import fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
+import { mock } from "node:test";
 const statusPath = ${JSON.stringify(statusPath)};
 const reportPath = ${JSON.stringify(reportPath)};
 const children = [];
@@ -85,16 +87,16 @@ fs.renameSync = function(source, target) {
       finished = true;
       queueMicrotask(() => {
         report.terminal.push(read());
-        vi.advanceTimersByTime(100);
+        mock.timers.tick(100);
         report.terminal.push(read());
-        vi.useRealTimers();
+        mock.timers.reset();
       });
     }
   }
 };
 syncBuiltinESMExports();
 function replay() {
-  vi.useFakeTimers({ now: Date.now(), toFake: ["Date", "setTimeout"] });
+  mock.timers.enable({ apis: ["Date", "setTimeout"], now: Date.now() });
   const emit = (index, event) => children[index].listener(event);
   const stream = () => emit(1, { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "x" } });
   const transition = (index, event) => {
@@ -104,8 +106,8 @@ function replay() {
   };
   const sample = (state) => {
     const beforeWrites = writes, beforeBytes = bytes;
-    for (let i = 0; i < 1000; i++) { stream(); vi.advanceTimersByTime(10); }
-    vi.advanceTimersByTime(100);
+    for (let i = 0; i < 1000; i++) { stream(); mock.timers.tick(10); }
+    mock.timers.tick(100);
     report.samples.push({ state, writes: writes - beforeWrites, bytes: bytes - beforeBytes, now: Date.now(), status: read() });
   };
   const start = { type: "tool_execution_start", toolName: "contact_supervisor", toolCallId: "decision", args: { reason: "need_decision", message: "Choose" } };

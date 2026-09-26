@@ -26,17 +26,21 @@
   },
   "files": [
     "index.ts",
-    "src/**/*.ts",
+    "src/",
     "*.mjs",
     "agents/",
-    "skills/**/*",
-    "prompts/**/*",
-    "docs/**/*",
+    "skills/",
+    "prompts/",
+    "docs/",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
   ],
   "keywords": ["pi-package", "pi", "pi-coding-agent", "subagents", "ai", "agents", "cli"],
+  "scripts": {
+    "test": "vitest run --project pi-subagents",
+    "typecheck": "tsc --noEmit"
+  },
   "pi": {
     "extensions": ["./index.ts"],
     "skills": ["./skills"],

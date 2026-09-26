@@ -1998,7 +1998,8 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
         fs.readFileSync(await waitForAsyncResultFile(id, 10_000), "utf-8"),
       ) as AsyncResultPayload;
       const status = await waitForAsyncState(id, (candidate) => candidate.state === "failed");
-      const diagnostic = /Unable to capture staged index baseline:.*not a git repository/is;
+      // 移植适配：git 输出可能是本地化文案（如中文），两种措辞都接受。
+      const diagnostic = /Unable to capture staged index baseline:.*(?:not a git repository|不是 Git 仓库)/is;
 
       assert.equal(payload.success, false);
       assert.match(payload.results[0]?.error ?? "", diagnostic);

@@ -171,7 +171,10 @@ describe("renderSubagentResult fork indicator", () => {
         { expanded: true },
         theme,
       );
-      const text = widget.render(160).join("\n");
+      const text = widget
+        .render(160)
+        .map((line) => line.trimEnd())
+        .join("\n");
       for (const result of details.results) {
         assert.match(text, new RegExp(`${result.children[0].id} · running`));
       }
@@ -202,7 +205,13 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    assert.match(widget.render(160).join("\n"), /terminal-child · failed/);
+    assert.match(
+      widget
+        .render(160)
+        .map((line) => line.trimEnd())
+        .join("\n"),
+      /terminal-child · failed/,
+    );
 
     const compact = renderSubagentResult!(
       {
@@ -225,6 +234,7 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     )
       .render(160)
+      .map((line) => line.trimEnd())
       .join("\n");
     assert.match(compact, /↳ └─ \[\d{2}:\d{2}:\d{2}\] . compact-terminal-child · complete · Done/);
   });
@@ -258,7 +268,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /Error: management failed/);
     assert.match(text, /first diagnostic/);
     assert.match(text, /second diagnostic/);
@@ -276,7 +289,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /Managed agents:/);
     assert.match(text, /- reviewer/);
     assert.match(text, /- writer/);
@@ -293,7 +309,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /^Run status:/);
     assert.match(text, /3 lines/);
     assert.ok(text.includes(expandHint));
@@ -309,6 +328,7 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     )
       .render(120)
+      .map((line) => line.trimEnd())
       .join("\n");
     assert.match(unstructured, /first detail/);
     assert.match(unstructured, /second detail/);
@@ -323,6 +343,7 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     )
       .render(120)
+      .map((line) => line.trimEnd())
       .map((line) => line.trimEnd())
       .join("\n");
     assert.equal(singleLine, "No active async run transcript is available.");
@@ -339,7 +360,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /\[fork\]/);
   });
 
@@ -386,7 +410,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /↳ └─ \[\d{2}:\d{2}:\d{2}\] . implement · running · bash/);
   });
 
@@ -414,7 +441,10 @@ describe("renderSubagentResult fork indicator", () => {
         theme,
       );
 
-      const text = widget.render(120).join("\n");
+      const text = widget
+        .render(120)
+        .map((line) => line.trimEnd())
+        .join("\n");
       assert.match(text, new RegExp(`\\[${context}\\]`));
     }
   });
@@ -436,6 +466,7 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     )
       .render(160)
+      .map((line) => line.trimEnd())
       .join("\n");
 
     assert.match(compact, /parallel \[mixed\]/);
@@ -458,6 +489,7 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     )
       .render(160)
+      .map((line) => line.trimEnd())
       .join("\n");
 
     assert.match(expanded, /parallel \[mixed\]/);
@@ -492,7 +524,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /npm test -- --watch --runInBand --reporter=dot/);
   });
 
@@ -520,6 +555,7 @@ describe("renderSubagentResult fork indicator", () => {
         theme,
       )
         .render(40)
+        .map((line) => line.trimEnd())
         .join("\n"),
     );
 
@@ -544,6 +580,7 @@ describe("renderSubagentResult fork indicator", () => {
         theme,
       )
         .render(40)
+        .map((line) => line.trimEnd())
         .join("\n"),
     );
 
@@ -651,8 +688,14 @@ describe("renderSubagentResult fork indicator", () => {
         details: { mode: "single" as const, results: [child] },
       };
       const [compact, expanded] = withMockedDateNow(0, () => [
-        renderSubagentResult!(result, { expanded: false }, theme).render(120).join("\n"),
-        renderSubagentResult!(result, { expanded: true }, theme).render(120).join("\n"),
+        renderSubagentResult!(result, { expanded: false }, theme)
+          .render(120)
+          .map((line) => line.trimEnd())
+          .join("\n"),
+        renderSubagentResult!(result, { expanded: true }, theme)
+          .render(120)
+          .map((line) => line.trimEnd())
+          .join("\n"),
       ]);
 
       assert.equal(firstGrapheme(compact), testCase.glyph, `${testCase.name} compact glyph`);
@@ -713,6 +756,7 @@ describe("renderSubagentResult fork indicator", () => {
         theme,
       )
         .render(120)
+        .map((line) => line.trimEnd())
         .join("\n");
 
       assert.match(summary, new RegExp(`· ${testCase.state}$`), testCase.name);
@@ -766,6 +810,7 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     )
       .render(120)
+      .map((line) => line.trimEnd())
       .join("\n");
 
     assert.match(summary, /· running$/);
@@ -828,6 +873,7 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     )
       .render(120)
+      .map((line) => line.trimEnd())
       .join("\n");
 
     assert.match(summary, /· stopped$/);
@@ -868,6 +914,7 @@ describe("renderSubagentResult fork indicator", () => {
         theme,
       )
         .render(120)
+        .map((line) => line.trimEnd())
         .join("\n");
 
       assert.match(summary, /· completed$/, mode);
@@ -896,9 +943,18 @@ describe("renderSubagentResult fork indicator", () => {
       },
     };
 
-    const summary = renderSubagentSummary!(result, {}, theme).render(120).join("\n");
-    const compact = renderSubagentResult!(result, { expanded: false }, theme).render(120).join("\n");
-    const expanded = renderSubagentResult!(result, { expanded: true }, theme).render(120).join("\n");
+    const summary = renderSubagentSummary!(result, {}, theme)
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
+    const compact = renderSubagentResult!(result, { expanded: false }, theme)
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
+    const expanded = renderSubagentResult!(result, { expanded: true }, theme)
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(summary, /■ workflow · partial$/);
     assert.equal(firstGrapheme(compact), "■");
     assert.match(expanded, /■ workflow .*· partial$/m);
@@ -939,6 +995,7 @@ describe("renderSubagentResult fork indicator", () => {
         theme,
       )
         .render(120)
+        .map((line) => line.trimEnd())
         .join("\n");
 
       assert.match(summary, /· failed$/, mode);
@@ -1023,8 +1080,14 @@ describe("renderSubagentResult fork indicator", () => {
       content: [{ type: "text" as const, text: "mixed" }],
       details: { mode: "parallel" as const, totalSteps: results.length, results },
     };
-    const compact = renderSubagentResult!(result, { expanded: false }, theme).render(160).join("\n");
-    const expanded = renderSubagentResult!(result, { expanded: true }, theme).render(160).join("\n");
+    const compact = renderSubagentResult!(result, { expanded: false }, theme)
+      .render(160)
+      .map((line) => line.trimEnd())
+      .join("\n");
+    const expanded = renderSubagentResult!(result, { expanded: true }, theme)
+      .render(160)
+      .map((line) => line.trimEnd())
+      .join("\n");
 
     assert.match(compact, /^■ parallel/);
     assert.match(compact, /■ three/);
@@ -1083,7 +1146,10 @@ describe("renderSubagentResult fork indicator", () => {
       };
       for (const expanded of childFailed ? [true] : [false, true]) {
         const text = withTerminalWidth(220, () =>
-          renderSubagentResult!(result, { expanded }, theme).render(220).join("\n"),
+          renderSubagentResult!(result, { expanded }, theme)
+            .render(220)
+            .map((line) => line.trimEnd())
+            .join("\n"),
         );
         assert.equal(text.split(hostError).length - 1, 1, text);
         if (expanded) assert.equal(text.split(childError).length - 1, childFailed ? 1 : 0, text);
@@ -1122,8 +1188,14 @@ describe("renderSubagentResult fork indicator", () => {
       },
     };
 
-    const compact = renderSubagentResult!(result, { expanded: false }, theme).render(160).join("\n");
-    const expanded = renderSubagentResult!(result, { expanded: true }, theme).render(160).join("\n");
+    const compact = renderSubagentResult!(result, { expanded: false }, theme)
+      .render(160)
+      .map((line) => line.trimEnd())
+      .join("\n");
+    const expanded = renderSubagentResult!(result, { expanded: true }, theme)
+      .render(160)
+      .map((line) => line.trimEnd())
+      .join("\n");
 
     assert.match(compact, /^■ parallel/);
     assert.match(expanded, /^■ parallel[^\n]* · paused/);
@@ -1152,7 +1224,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /^✓ reviewer/);
     assert.match(text, /⟳ 2/);
     assert.match(text, /3 tool uses/);
@@ -1183,7 +1258,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /^✗ reviewer/);
     assert.match(text, /⎿ {2}Error: boom/);
   });
@@ -1228,7 +1306,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /Configure the expand key for live detail/);
     assert.match(text, /active 2s ago/);
     assert.match(text, /⎿ {2}read: package\.json \| 3\.0s/);
@@ -1269,6 +1350,7 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     )
       .render(160)
+      .map((line) => line.trimEnd())
       .join("\n");
     assert.match(single, /reviewer \(gpt-5\.5 · thinking high\)/);
 
@@ -1325,6 +1407,7 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     )
       .render(160)
+      .map((line) => line.trimEnd())
       .join("\n");
     assert.match(multi, /scan \(claude-haiku-4-5 · thinking low\)/);
     assert.match(multi, /fix \(gpt-5-mini\)/);
@@ -1357,6 +1440,7 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     )
       .render(160)
+      .map((line) => line.trimEnd())
       .join("\n");
     assert.match(expanded, /review \(gpt-5\.5 · thinking high\)/);
   });
@@ -1397,7 +1481,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(160).join("\n");
+    const text = widget
+      .render(160)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /Review the diff[^\n]* · running/);
     assert.doesNotMatch(text, /reviewer:\s+Review the diff/);
   });
@@ -1434,8 +1521,12 @@ describe("renderSubagentResult fork indicator", () => {
       },
     };
     const [first, second] = withMockedDateNow(0, () => [
-      renderSubagentResult!(result, { expanded: false }, theme).render(120),
-      renderSubagentResult!(result, { expanded: false }, theme).render(120),
+      renderSubagentResult!(result, { expanded: false }, theme)
+        .render(120)
+        .map((line) => line.trimEnd()),
+      renderSubagentResult!(result, { expanded: false }, theme)
+        .render(120)
+        .map((line) => line.trimEnd()),
     ]);
 
     assert.deepEqual(second, first);
@@ -1473,7 +1564,9 @@ describe("renderSubagentResult fork indicator", () => {
           },
           { expanded: false },
           theme,
-        ).render(120)[0] ?? "",
+        )
+          .render(120)
+          .map((line) => line.trimEnd())[0] ?? "",
       );
 
     assert.notEqual(renderGlyph(1), renderGlyph(2));
@@ -1502,7 +1595,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /^■ chain/);
     assert.match(text, /⎿ {2}Paused/);
   });
@@ -1529,7 +1625,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /⎿ {2}Done \(no text output\)/);
     assert.doesNotMatch(text, /0ms/);
   });
@@ -1587,7 +1686,7 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const lines = widget.render(120);
+    const lines = widget.render(120).map((line) => line.trimEnd());
     const pendingIndex = lines.findIndex((line) => /Step 2\/2: second/.test(line));
     assert.notEqual(pendingIndex, -1);
     assert.match(lines[pendingIndex]!, /◦ Step 2\/2: second · pending/);
@@ -1641,7 +1740,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /parallel · 2 agents running · 0\/3 done/);
     assert.match(text, /third task/);
     assert.doesNotMatch(text, /Step 3\/3: worker/);
@@ -1723,7 +1825,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /parallel · 1 agent running · 1\/3 done/);
   });
 
@@ -1805,7 +1910,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /chain · step 1\/3 · parallel group: 2 agents running · 0\/3 done/);
     assert.match(text, /Scan the repository/);
     assert.match(text, /review/);
@@ -1919,7 +2027,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /chain · step 2\/3 · parallel group: 2 agents running · 0\/2 done/);
     assert.match(text, /scan/);
     assert.match(text, /review/);
@@ -1997,7 +2108,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /chain · step 3\/3/);
     assert.match(text, /Step 1\/3: plan/);
     assert.match(text, /Step 2\/3: parallel group/);
@@ -2041,7 +2155,10 @@ describe("renderSubagentResult fork indicator", () => {
       theme,
     );
 
-    const text = widget.render(120).join("\n");
+    const text = widget
+      .render(120)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(text, /chain · step 1\/3/);
     assert.match(text, /Step 1\/3: scan/);
     assert.doesNotMatch(text, /parallel group:/);
@@ -2065,14 +2182,20 @@ describe("renderSubagentResult fork indicator", () => {
       },
     };
 
-    const summary = renderSubagentSummary!(result, {}, theme).render(180).join("\n");
+    const summary = renderSubagentSummary!(result, {}, theme)
+      .render(180)
+      .map((line) => line.trimEnd())
+      .join("\n");
     assert.match(summary, /reviewer/);
     assert.doesNotMatch(summary, /Step 1\/1/);
     assert.doesNotMatch(summary, /Agent 1\/1/);
     assert.doesNotMatch(summary, /reviewer:\s+Review the current docs/);
 
     for (const expanded of [false, true]) {
-      const text = renderSubagentResult!(result, { expanded }, theme).render(180).join("\n");
+      const text = renderSubagentResult!(result, { expanded }, theme)
+        .render(180)
+        .map((line) => line.trimEnd())
+        .join("\n");
       assert.match(text, /reviewer/, expanded ? "expanded final result" : "compact final result");
       assert.doesNotMatch(text, /Step 1\/1/);
       assert.doesNotMatch(text, /Agent 1\/1/);
@@ -2130,7 +2253,10 @@ describe("renderSubagentResult fork indicator", () => {
     };
 
     for (const expanded of [false, true]) {
-      const text = renderSubagentResult!(result, { expanded }, theme).render(220).join("\n");
+      const text = renderSubagentResult!(result, { expanded }, theme)
+        .render(220)
+        .map((line) => line.trimEnd())
+        .join("\n");
       assert.match(text, /Gather context/);
       assert.match(text, /Review diff/);
       assert.doesNotMatch(text, /Agent \d+\/2:/);
@@ -2170,7 +2296,10 @@ describe("renderSubagentResult fork indicator", () => {
     };
 
     for (const expanded of [false, true]) {
-      const text = renderSubagentResult!(result, { expanded }, theme).render(220).join("\n");
+      const text = renderSubagentResult!(result, { expanded }, theme)
+        .render(220)
+        .map((line) => line.trimEnd())
+        .join("\n");
       assert.match(text, /Step 2\/3: parallel group/);
       assert.match(text, /Gather context/);
       assert.match(text, /Review diff/);
@@ -2193,7 +2322,10 @@ describe("renderSubagentResult fork indicator", () => {
     };
 
     for (const expanded of [false, true]) {
-      const text = renderSubagentResult!(result, { expanded }, theme).render(180).join("\n");
+      const text = renderSubagentResult!(result, { expanded }, theme)
+        .render(180)
+        .map((line) => line.trimEnd())
+        .join("\n");
       const rows = text.split("\n").filter((line) => /Inspect the same files/.test(line) && !/task:/.test(line));
       assert.equal(rows.length, 2);
       assert.notEqual(rows[0], rows[1], "duplicate unlabeled rows need stable disambiguators");
@@ -2230,7 +2362,9 @@ describe("renderSubagentResult fork indicator", () => {
     };
 
     for (const expanded of [false, true]) {
-      const lines = renderSubagentResult!(result, { expanded }, theme).render(180);
+      const lines = renderSubagentResult!(result, { expanded }, theme)
+        .render(180)
+        .map((line) => line.trimEnd());
       const text = lines.join("\n");
       assert.ok(
         lines.some((line) => /^\s+output: \/tmp\/review\.md$/.test(line)),

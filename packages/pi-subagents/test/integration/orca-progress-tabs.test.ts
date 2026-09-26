@@ -139,7 +139,7 @@ describe("Orca progress-tab observer", () => {
       const exitCode = await runProcess(
         process.execPath,
         [
-          path.join(repo, "node_modules/jiti/lib/jiti-cli.mjs"),
+          path.join(repo, "../../node_modules/jiti/lib/jiti-cli.mjs"),
           path.join(repo, "src/runs/background/subagent-runner-bootstrap.ts"),
           configPath,
         ],
@@ -238,7 +238,7 @@ describe("Orca progress-tab observer", () => {
       const exitCode = await runProcess(
         process.execPath,
         [
-          path.join(repo, "node_modules/jiti/lib/jiti-cli.mjs"),
+          path.join(repo, "../../node_modules/jiti/lib/jiti-cli.mjs"),
           path.join(repo, "src/runs/background/subagent-runner-bootstrap.ts"),
           configPath,
         ],

@@ -164,7 +164,7 @@ describe("native runner result publication", { skip: !available ? "pi packages u
           return { unref() {} } as ReturnType<typeof setInterval>;
         }) as typeof setInterval);
         tracker.handleStarted({ id, asyncDir, sessionId, completionOwnerId: owner, mode: "chain" });
-        intervalMock.mock.restore();
+        intervalMock.mockRestore();
         watcher.startResultWatcher();
         await fileBarrier(path.join(root, "blocked.json"));
         await fileBarrier(path.join(root, "terminal.json"));
@@ -257,7 +257,7 @@ describe("native runner result publication", { skip: !available ? "pi packages u
       }) as typeof setInterval);
       try {
         tracker.handleStarted({ id, asyncDir, sessionId: "session", completionOwnerId: "owner" });
-        interval.mock.restore();
+        interval.mockRestore();
         // The result watcher has consumed the payload before status polling.
         tracker.handleComplete({ id, sessionId: "session", state: terminal, success: false });
         const cleanup = state.cleanupTimers.get(id);
@@ -307,7 +307,7 @@ describe("native runner result publication", { skip: !available ? "pi packages u
       }) as typeof setInterval);
       try {
         tracker.handleStarted({ id, asyncDir, sessionId: "session", completionOwnerId: "owner" });
-        interval.mock.restore();
+        interval.mockRestore();
         tick();
         assert.equal(state.asyncJobs.get(id)?.status, terminal);
         assert.equal(state.cleanupTimers.has(id), false);
