@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import { keyText } from "@earendil-works/pi-coding-agent";
+import { describe, it } from "vitest";
 
 type RenderTheme = {
   fg(name: string, text: string): string;

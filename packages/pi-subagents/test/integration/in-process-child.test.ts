@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { after, before, beforeEach, describe, it } from "node:test";
+import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 import { runSync } from "../../src/runs/foreground/execution.ts";
 import {
   type ChildSessionFactory,
@@ -38,7 +38,7 @@ describe("in-process foreground child", () => {
   let mockPi: MockPi;
   const savedEnv = { ...process.env };
 
-  before(() => {
+  beforeAll(() => {
     mockPi = createMockPi();
     mockPi.install();
   });
@@ -50,7 +50,7 @@ describe("in-process foreground child", () => {
     delete process.env.PI_SUBAGENT_CHILD_AGENT;
   });
 
-  after(() => {
+  afterAll(() => {
     removeTempDir(tempDir);
     mockPi.uninstall();
   });

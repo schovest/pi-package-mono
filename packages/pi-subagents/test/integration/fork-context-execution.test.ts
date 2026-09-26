@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { after, afterEach, before, beforeEach, describe, it } from "node:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, it } from "vitest";
 import { discoverAgents } from "../../src/agents/agents.ts";
 import {
   ACTIVE_ASYNC_CAPACITY_DIR,
@@ -109,12 +109,12 @@ describe("fork context execution wiring", { skip: !available ? "subagent executo
   let tempDir: string;
   let mockPi: MockPi;
 
-  before(() => {
+  beforeAll(() => {
     mockPi = createMockPi();
     mockPi.install();
   });
 
-  after(() => {
+  afterAll(() => {
     mockPi.uninstall();
   });
 

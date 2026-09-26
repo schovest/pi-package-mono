@@ -8,7 +8,7 @@
  */
 
 import assert from "node:assert/strict";
-import { afterEach, beforeEach, describe, it } from "node:test";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { runChildSession } from "../../src/runs/background/run-child-session.ts";
 import { buildRunnerChildLaunch } from "../../src/runs/background/runner-child-launch.ts";
 import { runSync } from "../../src/runs/foreground/execution.ts";

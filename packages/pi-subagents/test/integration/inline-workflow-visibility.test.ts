@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { it } from "node:test";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Editor } from "@earendil-works/pi-tui";
+import { it } from "vitest";
 import type { AsyncJobState, SubagentState } from "../../src/shared/types.ts";
 import { WIDGET_KEY } from "../../src/shared/types.ts";
 import { FLEET_STATUS_WIDGET_KEY, SubagentFleetStatus } from "../../src/tui/fleet-status.ts";

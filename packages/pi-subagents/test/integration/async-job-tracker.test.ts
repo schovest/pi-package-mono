@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it, onTestFinished } from "vitest";
 import { registerExternalJobProvider } from "../../src/api/external-job-provider.ts";
 import {
   createNativeSupervisorChannel,
@@ -2742,7 +2742,7 @@ describe("async job tracker", { skip: !available ? "pi packages not available" :
       console.error = (...args: unknown[]) => {
         diagnostics.push(args);
       };
-      t.after(() => {
+      onTestFinished(() => {
         console.error = originalError;
       });
       const tracker = createTracker(pi, createState() as never, asyncRoot, { pollIntervalMs: 10 });

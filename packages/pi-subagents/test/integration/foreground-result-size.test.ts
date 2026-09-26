@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, afterEach, before, beforeEach, describe, it } from "node:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, it } from "vitest";
 import type { MockPi } from "../support/helpers.ts";
 import { events, createMockPi, createTempDir, removeTempDir, tryImport } from "../support/helpers.ts";
 
@@ -112,12 +112,12 @@ describe(
     let tempDir: string;
     let mockPi: MockPi;
 
-    before(() => {
+    beforeAll(() => {
       mockPi = createMockPi();
       mockPi.install();
     });
 
-    after(() => {
+    afterAll(() => {
       mockPi.uninstall();
     });
 

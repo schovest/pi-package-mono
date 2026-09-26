@@ -3,7 +3,7 @@ import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "vitest";
 import { enqueueChainAppendRequest } from "../../src/runs/background/chain-append.ts";
 import { deliverStopRequest } from "../../src/runs/background/control-channel.ts";
 import { resultFilesForSession } from "../../src/runs/background/result-files.ts";

@@ -4,7 +4,7 @@ import { channel } from "node:diagnostics_channel";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { test } from "node:test";
+import { test } from "vitest";
 import { ASYNC_DIR, RESULTS_DIR, observeSharedCwdRunner } from "../support/async-execution-fixture.ts";
 
 // Synthetic lifecycle only: no runner, providers, polling, or Windows control.

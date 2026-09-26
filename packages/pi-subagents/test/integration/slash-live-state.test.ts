@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 
 interface SlashLiveStateModule {
   applySlashUpdate?: typeof import("../../src/slash/slash-live-state.ts").applySlashUpdate;

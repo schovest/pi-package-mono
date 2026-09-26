@@ -3,7 +3,7 @@ import fsDefault, * as fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import {
   ACTIVE_RUN_INDEX_DIR,
   DEFAULT_STALE_TERMINAL_ACTIVE_MARKER_MS,

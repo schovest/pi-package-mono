@@ -14,7 +14,13 @@ import { execFileSync } from "node:child_process";
 import fsDefault, * as fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { afterEach, describe, it, onTestFinished, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { discoverAgents } from "../../src/agents/agents.ts";
 import { registerSubagentCapabilityCeiling } from "../../src/api/capability-ceiling.ts";
 import {
@@ -3362,7 +3368,7 @@ Answer only from the supplied synthetic text.
       const releasePath = path.join(mockPi.dir, "attention-observed");
       // Keep the child idle until the parent has observed both status and delivery.
       // Also unblock it on assertion failure, rather than leaking a waiting runner.
-      t.after(() => fs.writeFileSync(releasePath, "release"));
+      onTestFinished(() => fs.writeFileSync(releasePath, "release"));
       mockPi.onCall({
         steps: [
           {
@@ -3710,7 +3716,7 @@ Answer only from the supplied synthetic text.
       writePendingAsyncResultFile(resultPath, payload);
       const originalRmSync = fsDefault.rmSync;
       let attempted = false;
-      t.mock.method(fsDefault, "rmSync", ((target: fs.PathLike, options?: fs.RmDirOptions) => {
+      vi.spyOn(fsDefault, "rmSync").mockImplementation(((target: fs.PathLike, options?: fs.RmDirOptions) => {
         if (path.resolve(String(target)) === path.resolve(resultPath)) {
           attempted = true;
           const error = new Error("denied") as NodeJS.ErrnoException;
@@ -3751,7 +3757,7 @@ Answer only from the supplied synthetic text.
           );
         }
       } finally {
-        t.mock.restoreAll();
+        vi.restoreAllMocks();
         syncBuiltinESMExports();
         fs.rmSync(childDir, { recursive: true, force: true });
         fs.rmSync(path.join(DIRS.results, `${runId}.json`), { force: true });

@@ -12,7 +12,13 @@ import fsDefault from "node:fs";
 import * as fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { afterEach, describe, it, onTestFinished, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { discoverAgents } from "../../src/agents/agents.ts";
 import { registerSubagentCapabilityCeiling } from "../../src/api/capability-ceiling.ts";
 import { resolveSubagentLaunchContract } from "../../src/api/preflight.ts";
@@ -390,7 +396,7 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
       const originalRenameSync = fsDefault.renameSync;
       let failedIdentityWrites = 0;
       let identityWriteAttempts = 0;
-      t.mock.method(fsDefault, "renameSync", ((source: fs.PathLike, target: fs.PathLike) => {
+      vi.spyOn(fsDefault, "renameSync").mockImplementation(((source: fs.PathLike, target: fs.PathLike) => {
         if (path.basename(String(target)) === "status.json") {
           const payload = JSON.parse(fs.readFileSync(source, "utf8")) as AsyncStatusPayload;
           if (
@@ -409,10 +415,10 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
         return originalRenameSync(source, target);
       }) as typeof fsDefault.renameSync);
       syncBuiltinESMExports();
-      t.after(() => syncBuiltinESMExports());
+      onTestFinished(() => syncBuiltinESMExports());
       const originalError = console.error;
       console.error = () => {};
-      t.after(() => {
+      onTestFinished(() => {
         console.error = originalError;
       });
 
@@ -469,7 +475,7 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
       console.error = (...args: unknown[]) => {
         diagnostics.push(args);
       };
-      t.after(() => {
+      onTestFinished(() => {
         console.error = originalError;
       });
 
@@ -511,7 +517,7 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
       console.error = (...args: unknown[]) => {
         diagnostics.push(args);
       };
-      t.after(() => {
+      onTestFinished(() => {
         console.error = originalError;
       });
 
@@ -1225,7 +1231,7 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
       const originalRmSync = fsDefault.rmSync;
       let proceedCleanupFailures = 0;
       let rollbackCount = 0;
-      t.mock.method(fsDefault, "rmSync", ((target: fs.PathLike, options?: fs.RmOptions) => {
+      vi.spyOn(fsDefault, "rmSync").mockImplementation(((target: fs.PathLike, options?: fs.RmOptions) => {
         const targetPath = String(target);
         if (
           targetPath.includes(".runner-startup-proceed.json.") &&
@@ -1238,7 +1244,7 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
         return originalRmSync(target, options);
       }) as typeof fsDefault.rmSync);
       syncBuiltinESMExports();
-      t.after(() => syncBuiltinESMExports());
+      onTestFinished(() => syncBuiltinESMExports());
 
       const launch = executeAsyncSingle(id, {
         agent: "external",
@@ -1310,7 +1316,7 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
       );
       assert.ok(activeAsyncCapacity);
       const originalKill = process.kill;
-      t.mock.method(process, "kill", ((pid: number, signal?: NodeJS.Signals | 0) => {
+      vi.spyOn(process, "kill").mockImplementation(((pid: number, signal?: NodeJS.Signals | 0) => {
         if (signal === 0) return true;
         return originalKill(pid, signal);
       }) as typeof process.kill);

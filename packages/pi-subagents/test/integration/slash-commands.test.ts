@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { beforeEach, describe, it } from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
+import { beforeEach, describe, it } from "vitest";
 
 import { clearRuntimeAgentsForPi } from "../../src/agents/runtime-agent-registry.ts";
 import { registerAgent } from "../../src/api/agents.ts";

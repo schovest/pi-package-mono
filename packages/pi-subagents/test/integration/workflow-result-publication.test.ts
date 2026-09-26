@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import registerSubagentNotify from "../../src/runs/background/notify.ts";
 import { createResultWatcher } from "../../src/runs/background/result-watcher.ts";
 import { SUBAGENT_ASYNC_COMPLETE_EVENT, type SubagentState } from "../../src/shared/types.ts";

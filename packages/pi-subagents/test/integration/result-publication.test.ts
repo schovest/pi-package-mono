@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { describe, it } from "node:test";
+import { afterEach, describe, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import { createAsyncJobTracker } from "../../src/runs/background/async-job-tracker.ts";
 import registerSubagentNotify from "../../src/runs/background/notify.ts";
 import { createResultWatcher } from "../../src/runs/background/result-watcher.ts";
@@ -153,7 +159,7 @@ describe("native runner result publication", { skip: !available ? "pi packages u
         });
         assert.notEqual(receipt.isError, true);
         // Capture only the real tracker's liveness callback; execute it at explicit filesystem boundaries.
-        const intervalMock = t.mock.method(globalThis, "setInterval", ((handler: () => void) => {
+        const intervalMock = vi.spyOn(globalThis, "setInterval").mockImplementation(((handler: () => void) => {
           trackerTick = handler;
           return { unref() {} } as ReturnType<typeof setInterval>;
         }) as typeof setInterval);
@@ -245,7 +251,7 @@ describe("native runner result publication", { skip: !available ? "pi packages u
           refreshes++;
         },
       });
-      const interval = t.mock.method(globalThis, "setInterval", ((handler: () => void) => {
+      const interval = vi.spyOn(globalThis, "setInterval").mockImplementation(((handler: () => void) => {
         tick = handler;
         return { unref() {} } as ReturnType<typeof setInterval>;
       }) as typeof setInterval);
@@ -295,7 +301,7 @@ describe("native runner result publication", { skip: !available ? "pi packages u
           refreshes++;
         },
       });
-      const interval = t.mock.method(globalThis, "setInterval", ((handler: () => void) => {
+      const interval = vi.spyOn(globalThis, "setInterval").mockImplementation(((handler: () => void) => {
         tick = handler;
         return { unref() {} } as ReturnType<typeof setInterval>;
       }) as typeof setInterval);
@@ -348,7 +354,7 @@ describe("native runner result publication", { skip: !available ? "pi packages u
     fs.mkdirSync(directory);
     fs.symlinkSync(directory, alias, "junction");
     const watch = fs.watch;
-    t.mock.method(fs, "watch", ((watched, ...args) => {
+    vi.spyOn(fs, "watch").mockImplementation(((watched, ...args) => {
       assert.equal(watched, fs.realpathSync.native(directory));
       return Reflect.apply(watch, fs, [watched, ...args]);
     }) as typeof fs.watch);

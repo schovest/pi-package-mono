@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { it } from "node:test";
 import { visibleWidth } from "@earendil-works/pi-tui";
+import { it } from "vitest";
 import type { AsyncJobState } from "../../src/shared/types.ts";
 import { renderWidget, setInlineWorkflowCoverage } from "../../src/tui/render.ts";
 

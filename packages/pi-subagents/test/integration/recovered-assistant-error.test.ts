@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { runSync } from "../../src/runs/foreground/execution.ts";
 import { createStructuredOutputRuntime } from "../../src/runs/shared/structured-output.ts";
 import type { JsonSchemaObject } from "../../src/shared/types.ts";

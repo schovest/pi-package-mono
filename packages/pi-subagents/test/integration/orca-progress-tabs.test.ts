@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { afterEach, describe, it } from "node:test";
+import { afterEach, describe, it } from "vitest";
 import { TEMP_ROOT_DIR } from "../../src/shared/types.ts";
 import { writeNodeCommand } from "../support/node-command.ts";
 

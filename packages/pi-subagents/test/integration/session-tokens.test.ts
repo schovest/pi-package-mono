@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { createTempDir, removeTempDir, tryImport } from "../support/helpers.ts";
 
 interface SessionTokensModule {

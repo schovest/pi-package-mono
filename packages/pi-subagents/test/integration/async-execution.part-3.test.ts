@@ -12,8 +12,8 @@ import { ChildProcess } from "node:child_process";
 import { channel } from "node:diagnostics_channel";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { describe, it } from "vitest";
 import { discoverAgents } from "../../src/agents/agents.ts";
 import {
   ACTIVE_ASYNC_CAPACITY_DIR,
@@ -765,7 +765,7 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
       const observer = observeSharedCwdRunner(id);
       const originalFactoryModule = childSessionFactoryModule();
       const failures: unknown[] = [];
-      const reportFailure = () => observer.reportFailure((message) => t.diagnostic(message));
+      const reportFailure = () => observer.reportFailure((message) => console.log(message));
       try {
         assert.ok(originalFactoryModule, "expected the installed scripted runner factory");
         const factoryPath = path.join(tempDir, "shared-cwd-exit-phases.mjs");
@@ -844,7 +844,7 @@ export default function() {
           fs.rmSync(repo, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
           // Validate channel support/correlation without reading artifacts on success.
           const summary = observer.summary();
-          t.diagnostic(`#1906 observer ${JSON.stringify(summary)}`);
+          console.log(`#1906 observer ${JSON.stringify(summary)}`);
           if (runnerStarted) {
             assert.equal(
               summary.correlatedProcesses,

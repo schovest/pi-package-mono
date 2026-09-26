@@ -13,8 +13,8 @@ import { once } from "node:events";
 import * as fs from "node:fs";
 import { type Socket, createServer } from "node:net";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
+import { describe, it, onTestFinished, vi } from "vitest";
 import {
   deliverInterruptRequest,
   deliverStopRequest,
@@ -65,7 +65,6 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
         `
 import fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
-import { mock } from "node:test";
 const statusPath = ${JSON.stringify(statusPath)};
 const reportPath = ${JSON.stringify(reportPath)};
 const children = [];
@@ -86,16 +85,16 @@ fs.renameSync = function(source, target) {
       finished = true;
       queueMicrotask(() => {
         report.terminal.push(read());
-        mock.timers.tick(100);
+        vi.advanceTimersByTime(100);
         report.terminal.push(read());
-        mock.timers.reset();
+        vi.useRealTimers();
       });
     }
   }
 };
 syncBuiltinESMExports();
 function replay() {
-  mock.timers.enable({ apis: ["Date", "setTimeout"], now: Date.now() });
+  vi.useFakeTimers({ now: Date.now(), toFake: ["Date", "setTimeout"] });
   const emit = (index, event) => children[index].listener(event);
   const stream = () => emit(1, { type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "x" } });
   const transition = (index, event) => {
@@ -105,8 +104,8 @@ function replay() {
   };
   const sample = (state) => {
     const beforeWrites = writes, beforeBytes = bytes;
-    for (let i = 0; i < 1000; i++) { stream(); mock.timers.tick(10); }
-    mock.timers.tick(100);
+    for (let i = 0; i < 1000; i++) { stream(); vi.advanceTimersByTime(10); }
+    vi.advanceTimersByTime(100);
     report.samples.push({ state, writes: writes - beforeWrites, bytes: bytes - beforeBytes, now: Date.now(), status: read() });
   };
   const start = { type: "tool_execution_start", toolName: "contact_supervisor", toolCallId: "decision", args: { reason: "need_decision", message: "Choose" } };
@@ -147,10 +146,10 @@ export default function() {
         const watcher = fs.watch(fs.realpathSync.native(tempDir), () => {
           if (fs.existsSync(reportPath)) resolve();
         });
-        t.after(() => watcher.close());
+        onTestFinished(() => watcher.close());
       });
       setChildSessionFactoryModule(factoryPath);
-      t.after(() =>
+      onTestFinished(() =>
         setChildSessionFactoryModule(
           fileURLToPath(new URL("../support/runner-child-session-factory.ts", import.meta.url)),
         ),
@@ -191,7 +190,7 @@ export default function() {
       assert.notEqual(launched.isError, true);
       await reportReady;
       const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
-      t.diagnostic(
+      console.log(
         JSON.stringify(
           report.samples.map(({ state, writes, bytes }: { state: string; writes: number; bytes: number }) => ({
             state,
@@ -406,7 +405,7 @@ setTimeout(() => process.exit(90), 15000).unref();
             } catch (error) {
               cleanup = { readError: token(record(error).code) };
             }
-            t.diagnostic(
+            console.log(
               JSON.stringify({
                 mode,
                 expected,

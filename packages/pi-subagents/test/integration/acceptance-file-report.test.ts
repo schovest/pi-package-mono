@@ -3,6 +3,7 @@ import { ChildProcess, execFileSync } from "node:child_process";
 import { channel } from "node:diagnostics_channel";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 /**
  * Acceptance report sourcing through the real execution drivers: the report the
  * child wrote to its configured output file (recovered from its write tool
@@ -10,8 +11,7 @@ import * as path from "node:path";
  * children with the distinct configured paths required after #420. Runs the
  * full launch, event, and acceptance pipeline against the scripted child session.
  */
-import { after, afterEach, before, beforeEach, describe, it } from "node:test";
-import { pathToFileURL } from "node:url";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, it } from "vitest";
 import { readProcessTerminal } from "../../src/runs/background/process-terminal.ts";
 import { childSessionFactoryModule, setChildSessionFactoryModule } from "../../src/runs/shared/child-session.ts";
 import type { MockPi } from "../support/helpers.ts";
@@ -531,12 +531,12 @@ describe("acceptance file reports", { skip: !runSync ? "pi packages not availabl
     );
   }
 
-  before(() => {
+  beforeAll(() => {
     mockPi = createMockPi();
     mockPi.install();
   });
 
-  after(() => {
+  afterAll(() => {
     assert.equal(ownedRunners.size, 0, "Unproven owned runners: retain the mock queue");
     mockPi.uninstall();
   });

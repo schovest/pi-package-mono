@@ -15,7 +15,7 @@ import { once } from "node:events";
 import * as fs from "node:fs";
 import { type Socket, createServer } from "node:net";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { describe, it, onTestFinished } from "vitest";
 import { discoverAgents } from "../../src/agents/agents.ts";
 import {
   SUBAGENT_DELEGATION_REQUEST_EVENT,
@@ -4521,7 +4521,7 @@ if (!fs.existsSync(${JSON.stringify(holdPath)})) { console.log('{}'); } else {
         sessionId: parentPiSessionId,
         extensions: [{ id: "foreground-required", path: extensionPath }],
       });
-      t.after(registration.dispose);
+      onTestFinished(registration.dispose);
       const ctx = makeMinimalCtx(tempDir);
       ctx.sessionManager.getSessionId = () => parentPiSessionId;
       ctx.sessionManager.getSessionFile = () => path.join(tempDir, "sessions", "different-file-identity.jsonl");

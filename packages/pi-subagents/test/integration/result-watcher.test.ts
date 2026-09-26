@@ -3,7 +3,13 @@ import fsDefault, * as fs from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
-import { describe, it } from "node:test";
+import { afterEach, describe, it, vi } from "vitest";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { prepareMissionLaunch, writeMissionAsyncBinding } from "../../src/missions/lifecycle.ts";
 import { readMission, updateMission } from "../../src/missions/store.ts";
@@ -574,7 +580,7 @@ describe("result watcher", () => {
       const originalRenameSync = fsDefault.renameSync;
       const nameTooLong = new Error("public result alias is too long") as NodeJS.ErrnoException;
       nameTooLong.code = "ENAMETOOLONG";
-      t.mock.method(fsDefault, "renameSync", ((source: fs.PathLike, destination: fs.PathLike) => {
+      vi.spyOn(fsDefault, "renameSync").mockImplementation(((source: fs.PathLike, destination: fs.PathLike) => {
         if (String(destination) === publicResultPath) throw nameTooLong;
         return originalRenameSync(source, destination);
       }) as typeof fsDefault.renameSync);
@@ -646,7 +652,7 @@ describe("result watcher", () => {
       );
     } finally {
       console.error = originalError;
-      t.mock.restoreAll();
+      vi.restoreAllMocks();
       syncBuiltinESMExports();
       fs.rmSync(root, { recursive: true, force: true });
     }

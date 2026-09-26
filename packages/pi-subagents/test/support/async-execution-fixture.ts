@@ -13,7 +13,7 @@ import { channel } from "node:diagnostics_channel";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { after, afterEach, before, beforeEach } from "node:test";
+import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 import { CHILD_WATCHDOG_STATUS_EVENT } from "../../src/watchdog/child-status.ts";
 import { asyncResultTimeoutEvidence } from "./async-result-timeout-evidence.ts";
 import {
@@ -912,12 +912,12 @@ let tempDir: string;
 let mockPi: MockPi;
 
 export function installAsyncExecutionHooks(): void {
-  before(() => {
+  beforeAll(() => {
     mockPi = createMockPi();
     mockPi.install();
   });
 
-  after(() => {
+  afterAll(() => {
     mockPi.uninstall();
   });
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
-import test from "node:test";
+import { test } from "vitest";
 import { resolveCursorAgentLaunch } from "../../src/runs/shared/cursor-agent-adapter.ts";
 import { runExternalCli } from "../../src/runs/shared/external-cli-runner.ts";
 import { cursorSmokeInputs } from "../support/cursor-smoke-inputs.ts";

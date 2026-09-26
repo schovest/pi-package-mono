@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { after, afterEach, before, beforeEach, describe, it } from "node:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, it } from "vitest";
 import {
   EXTERNAL_JOB_PROVIDER_REGISTRY_KEY,
   registerExternalJobProvider,
@@ -114,7 +114,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
   let originalUserProfile: string | undefined;
   const budgetDirectories: string[] = [];
 
-  before(() => {
+  beforeAll(() => {
     originalHome = process.env.HOME;
     originalUserProfile = process.env.USERPROFILE;
     homeDir = createTempDir("pi-subagent-intercom-home-");
@@ -131,7 +131,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
     );
   });
 
-  after(() => {
+  afterAll(() => {
     mockPi.uninstall();
     if (originalHome === undefined) delete process.env.HOME;
     else process.env.HOME = originalHome;

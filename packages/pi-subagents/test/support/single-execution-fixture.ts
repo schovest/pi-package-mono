@@ -12,7 +12,7 @@
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { after, afterEach, before, beforeEach } from "node:test";
+import { afterAll, afterEach, beforeAll, beforeEach } from "vitest";
 import type { ChildRuntimeConfig } from "../../src/runs/shared/child-runtime-config.ts";
 import type { ChildWatchdogProgress, SubagentState } from "../../src/shared/types.ts";
 import { CHILD_WATCHDOG_STATUS_EVENT } from "../../src/watchdog/child-status.ts";
@@ -339,12 +339,12 @@ let mockPi: MockPi;
 let previousAgentDir: string | undefined;
 
 export function installSingleExecutionHooks() {
-  before(() => {
+  beforeAll(() => {
     mockPi = createMockPi();
     mockPi.install();
   });
 
-  after(() => {
+  afterAll(() => {
     mockPi.uninstall();
   });
 

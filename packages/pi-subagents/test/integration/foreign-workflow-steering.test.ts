@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { describe, it } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { describe, it } from "vitest";
 import { steerRequestsDir } from "../../src/runs/background/control-channel.ts";
 import {
   ASYNC_DIR,
