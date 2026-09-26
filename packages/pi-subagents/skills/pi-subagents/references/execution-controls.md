@@ -7,7 +7,6 @@ This file is a detailed reference loaded from `skills/pi-subagents/SKILL.md`.
 Agent files can live in:
 - `~/.pi/agent/agents/**/*.md` — user scope
 - `.pi/agents/**/*.md` — canonical project scope
-- legacy `.agents/**/*.md` — still read for compatibility, but `.pi/agents/` wins on conflicts
 
 Saved chain files may still be discovered for management and existing durable run state, but they are not a public execution surface. Author new orchestration with `workflowScript`.
 
