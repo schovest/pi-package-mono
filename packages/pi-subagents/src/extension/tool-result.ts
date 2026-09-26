@@ -8,12 +8,12 @@ import type { AgentToolResult } from "@earendil-works/pi-agent-core";
  * retain their return-based error handling.
  */
 export function finalizeToolResult<T>(result: AgentToolResult<T>): AgentToolResult<T> {
-	if (result.isError !== true) return result;
+  if (result.isError !== true) return result;
 
-	const message = result.content
-		.flatMap((item) => item.type === "text" && typeof item.text === "string" ? [item.text] : [])
-		.join("\n")
-		.trim();
+  const message = result.content
+    .flatMap((item) => (item.type === "text" && typeof item.text === "string" ? [item.text] : []))
+    .join("\n")
+    .trim();
 
-	throw new Error(message || "pi-subagents reported a logical tool failure.");
+  throw new Error(message || "pi-subagents reported a logical tool failure.");
 }

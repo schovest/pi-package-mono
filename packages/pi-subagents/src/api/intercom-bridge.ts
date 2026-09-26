@@ -1,3 +1,1 @@
-export {
-	resolveIntercomSessionTarget,
-} from "../intercom/intercom-bridge.ts";
+export { resolveIntercomSessionTarget } from "../intercom/intercom-bridge.ts";

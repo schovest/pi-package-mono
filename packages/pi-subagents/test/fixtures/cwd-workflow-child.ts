@@ -22,8 +22,12 @@ process.once("message", async (message: unknown) => {
     const result = await runWorkflowScript({
       processCwd: String((message as { processCwd: unknown }).processCwd),
       script: `return "recovered";`,
-      async launch(key) { return { key, ok: true, output: "ok", artifactPaths: [] }; },
-      async status(key) { return { key, ok: true, output: "ok", artifactPaths: [] }; },
+      async launch(key) {
+        return { key, ok: true, output: "ok", artifactPaths: [] };
+      },
+      async status(key) {
+        return { key, ok: true, output: "ok", artifactPaths: [] };
+      },
     });
     process.send?.({ type: "result", ok: true, value: result.value, chdirCalls, workerInitCwds });
   } catch (error) {

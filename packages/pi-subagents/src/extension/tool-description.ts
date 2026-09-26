@@ -5,8 +5,10 @@ import { getAgentDir, getProjectConfigDir } from "../shared/utils.ts";
 
 const CUSTOM_TOOL_DESCRIPTION_FILE = "subagent-tool-description.md";
 const CUSTOM_TOOL_DESCRIPTION_MAX_BYTES = 50 * 1024;
-const AGENT_SELECTION_GUIDANCE = 'First call {action:"list",capabilities:true}: executable, non-disabled agents only; external-cli requires runner.available === true. Passive PATH/PATHEXT/X_OK is not authentication/version/launch proof; preflight is authoritative.';
-const SUBAGENT_FAILURE_RECOVERY_GUIDANCE = "Workflow, child launch, prompt runtime, extension load or child tooling failure is a lane infrastructure blocker. Stop; report exact failure, run/status and repo/cwd/worktree/branch/ref; verify clean worktree or capture partial diff before same-protocol retry or asking the owner. Never silently switch to interactive_shell, pi -ne, Codex/Claude/Cursor CLI or foreground/external mode: governed-workflow fallback requires explicit owner approval, not Pi core's generic pi -ne hint. Explicit foreground/CLI requests and work outside that protocol remain valid.";
+const AGENT_SELECTION_GUIDANCE =
+  'First call {action:"list",capabilities:true}: executable, non-disabled agents only; external-cli requires runner.available === true. Passive PATH/PATHEXT/X_OK is not authentication/version/launch proof; preflight is authoritative.';
+const SUBAGENT_FAILURE_RECOVERY_GUIDANCE =
+  "Workflow, child launch, prompt runtime, extension load or child tooling failure is a lane infrastructure blocker. Stop; report exact failure, run/status and repo/cwd/worktree/branch/ref; verify clean worktree or capture partial diff before same-protocol retry or asking the owner. Never silently switch to interactive_shell, pi -ne, Codex/Claude/Cursor CLI or foreground/external mode: governed-workflow fallback requires explicit owner approval, not Pi core's generic pi -ne hint. Explicit foreground/CLI requests and work outside that protocol remain valid.";
 
 export const SUBAGENT_SAFETY_GUIDANCE = `SAFETY-CRITICAL SUBAGENT GUIDANCE:
 • Direct parent execution is the default. Invoke subagents only when delegation is authorized by the operator's current request or applicable user/project instructions; task size, complexity, risk, tool-call count, or recipe fit do not independently authorize delegation.
@@ -28,9 +30,10 @@ Named resources: {workflow:'review',args:{task:'...'}} or {workflow:'run-ci',arg
 
 export const DEFAULT_SUBAGENT_TOOL_DESCRIPTION = `${EXECUTION_GUIDANCE}\n\n${SUBAGENT_SAFETY_GUIDANCE}`;
 
-export const SUBAGENT_TOOL_PROMPT_SNIPPET = "For operator-requested delegation, use subagents; compose multi-child work in one workflow call.";
+export const SUBAGENT_TOOL_PROMPT_SNIPPET =
+  "For operator-requested delegation, use subagents; compose multi-child work in one workflow call.";
 export const SUBAGENT_TOOL_PROMPT_GUIDELINES = [
-	"Do not invoke subagents unless the operator requested delegation directly or through applicable instructions.",
+  "Do not invoke subagents unless the operator requested delegation directly or through applicable instructions.",
 ];
 
 export const COMPACT_SUBAGENT_TOOL_DESCRIPTION = DEFAULT_SUBAGENT_TOOL_DESCRIPTION;
@@ -44,132 +47,159 @@ WORKFLOW DETAILS:
 • Management discovery: list/get/models/guide; create/update/delete/eject/disable/enable/reset/refine; mission.*, schedule.*, watchdog.*, inspector.*, project.*, lane.status/recordMerge/recordSupersession; worktree.discard and plan-only worktree.cleanup; doctor and grant-spawn-budget. Use guide topics agents, missions, observability, tool-reference, configuration, models, watchdog or extension-api for exact action fields. Schedules take script inputs, not direct children; recipes live in the missions guide.`;
 
 function isToolDescriptionMode(value: unknown): value is ToolDescriptionMode {
-	return value === "full" || value === "compact" || value === "custom";
+  return value === "full" || value === "compact" || value === "custom";
 }
 
 function warn(options: ToolDescriptionOptions | undefined, message: string): void {
-	(options?.warn ?? console.warn)(`[pi-subagents] ${message}`);
+  (options?.warn ?? console.warn)(`[pi-subagents] ${message}`);
 }
 
 export interface ToolDescriptionOptions {
-	cwd?: string;
-	agentDir?: string;
-	warn?: (message: string) => void;
+  cwd?: string;
+  agentDir?: string;
+  warn?: (message: string) => void;
 }
 
 export interface SubagentToolPromptMetadata {
-	promptSnippet?: string;
-	promptGuidelines?: string[];
+  promptSnippet?: string;
+  promptGuidelines?: string[];
 }
 
-export function buildSubagentToolPromptMetadata(config: Pick<ExtensionConfig, "toolDescriptionMode"> = {}): SubagentToolPromptMetadata {
-	if (config.toolDescriptionMode !== undefined) return {};
-	return {
-		promptSnippet: SUBAGENT_TOOL_PROMPT_SNIPPET,
-		promptGuidelines: SUBAGENT_TOOL_PROMPT_GUIDELINES,
-	};
+export function buildSubagentToolPromptMetadata(
+  config: Pick<ExtensionConfig, "toolDescriptionMode"> = {},
+): SubagentToolPromptMetadata {
+  if (config.toolDescriptionMode !== undefined) return {};
+  return {
+    promptSnippet: SUBAGENT_TOOL_PROMPT_SNIPPET,
+    promptGuidelines: SUBAGENT_TOOL_PROMPT_GUIDELINES,
+  };
 }
 
-export function resolveToolDescriptionMode(config: Pick<ExtensionConfig, "toolDescriptionMode">, options?: ToolDescriptionOptions): ToolDescriptionMode {
-	const mode = config.toolDescriptionMode;
-	if (mode === undefined) return "full";
-	if (isToolDescriptionMode(mode)) return mode;
-	warn(options, `Ignoring invalid toolDescriptionMode ${JSON.stringify(mode)}; expected "full", "compact", or "custom".`);
-	return "full";
+export function resolveToolDescriptionMode(
+  config: Pick<ExtensionConfig, "toolDescriptionMode">,
+  options?: ToolDescriptionOptions,
+): ToolDescriptionMode {
+  const mode = config.toolDescriptionMode;
+  if (mode === undefined) return "full";
+  if (isToolDescriptionMode(mode)) return mode;
+  warn(
+    options,
+    `Ignoring invalid toolDescriptionMode ${JSON.stringify(mode)}; expected "full", "compact", or "custom".`,
+  );
+  return "full";
 }
 
 function customDescriptionPaths(options?: ToolDescriptionOptions): string[] {
-	const cwd = options?.cwd ?? process.cwd();
-	const agentDir = options?.agentDir ?? getAgentDir();
-	return [
-		path.join(getProjectConfigDir(cwd), CUSTOM_TOOL_DESCRIPTION_FILE),
-		path.join(agentDir, CUSTOM_TOOL_DESCRIPTION_FILE),
-	];
+  const cwd = options?.cwd ?? process.cwd();
+  const agentDir = options?.agentDir ?? getAgentDir();
+  return [
+    path.join(getProjectConfigDir(cwd), CUSTOM_TOOL_DESCRIPTION_FILE),
+    path.join(agentDir, CUSTOM_TOOL_DESCRIPTION_FILE),
+  ];
 }
 
 function renderCustomTemplate(template: string, options?: ToolDescriptionOptions): string {
-	const cwd = options?.cwd ?? process.cwd();
-	const agentDir = options?.agentDir ?? getAgentDir();
-	const projectConfigDir = getProjectConfigDir(cwd);
-	const variables: Record<string, () => string> = {
-		fullDescription: () => FULL_SUBAGENT_TOOL_DESCRIPTION,
-		full: () => FULL_SUBAGENT_TOOL_DESCRIPTION,
-		compactDescription: () => COMPACT_SUBAGENT_TOOL_DESCRIPTION,
-		compact: () => COMPACT_SUBAGENT_TOOL_DESCRIPTION,
-		safetyGuidance: () => SUBAGENT_SAFETY_GUIDANCE,
-		safety: () => SUBAGENT_SAFETY_GUIDANCE,
-		agentDir: () => agentDir,
-		projectConfigDir: () => projectConfigDir,
-	};
-	return template.replace(/\{\{(\w+)\}\}/g, (raw, name: string) => {
-		const replacement = variables[name];
-		if (replacement) return replacement();
-		warn(options, `${CUSTOM_TOOL_DESCRIPTION_FILE}: unknown placeholder ${raw} left unchanged.`);
-		return raw;
-	});
+  const cwd = options?.cwd ?? process.cwd();
+  const agentDir = options?.agentDir ?? getAgentDir();
+  const projectConfigDir = getProjectConfigDir(cwd);
+  const variables: Record<string, () => string> = {
+    fullDescription: () => FULL_SUBAGENT_TOOL_DESCRIPTION,
+    full: () => FULL_SUBAGENT_TOOL_DESCRIPTION,
+    compactDescription: () => COMPACT_SUBAGENT_TOOL_DESCRIPTION,
+    compact: () => COMPACT_SUBAGENT_TOOL_DESCRIPTION,
+    safetyGuidance: () => SUBAGENT_SAFETY_GUIDANCE,
+    safety: () => SUBAGENT_SAFETY_GUIDANCE,
+    agentDir: () => agentDir,
+    projectConfigDir: () => projectConfigDir,
+  };
+  return template.replace(/\{\{(\w+)\}\}/g, (raw, name: string) => {
+    const replacement = variables[name];
+    if (replacement) return replacement();
+    warn(options, `${CUSTOM_TOOL_DESCRIPTION_FILE}: unknown placeholder ${raw} left unchanged.`);
+    return raw;
+  });
 }
 
 function loadCustomToolDescription(options?: ToolDescriptionOptions): string | undefined {
-	for (const filePath of customDescriptionPaths(options)) {
-		let stat: fs.Stats;
-		try {
-			stat = fs.statSync(filePath);
-		} catch (error) {
-			if (typeof error === "object" && error !== null && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") continue;
-			warn(options, `Failed to inspect custom tool description '${filePath}': ${error instanceof Error ? error.message : String(error)}`);
-			continue;
-		}
-		if (!stat.isFile()) {
-			warn(options, `Ignoring custom tool description '${filePath}' because it is not a file.`);
-			continue;
-		}
-		if (stat.size > CUSTOM_TOOL_DESCRIPTION_MAX_BYTES) {
-			warn(options, `Ignoring custom tool description '${filePath}' because it is larger than ${CUSTOM_TOOL_DESCRIPTION_MAX_BYTES} bytes.`);
-			continue;
-		}
-		try {
-			const template = fs.readFileSync(filePath, "utf-8").trim();
-			if (!template) {
-				warn(options, `Ignoring empty custom tool description '${filePath}'.`);
-				continue;
-			}
-			const rendered = renderCustomTemplate(template, options).trim();
-			if (!rendered) {
-				warn(options, `Ignoring custom tool description '${filePath}' because it rendered empty.`);
-				continue;
-			}
-			return rendered;
-		} catch (error) {
-			warn(options, `Failed to read custom tool description '${filePath}': ${error instanceof Error ? error.message : String(error)}`);
-		}
-	}
-	return undefined;
+  for (const filePath of customDescriptionPaths(options)) {
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(filePath);
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as NodeJS.ErrnoException).code === "ENOENT"
+      )
+        continue;
+      warn(
+        options,
+        `Failed to inspect custom tool description '${filePath}': ${error instanceof Error ? error.message : String(error)}`,
+      );
+      continue;
+    }
+    if (!stat.isFile()) {
+      warn(options, `Ignoring custom tool description '${filePath}' because it is not a file.`);
+      continue;
+    }
+    if (stat.size > CUSTOM_TOOL_DESCRIPTION_MAX_BYTES) {
+      warn(
+        options,
+        `Ignoring custom tool description '${filePath}' because it is larger than ${CUSTOM_TOOL_DESCRIPTION_MAX_BYTES} bytes.`,
+      );
+      continue;
+    }
+    try {
+      const template = fs.readFileSync(filePath, "utf-8").trim();
+      if (!template) {
+        warn(options, `Ignoring empty custom tool description '${filePath}'.`);
+        continue;
+      }
+      const rendered = renderCustomTemplate(template, options).trim();
+      if (!rendered) {
+        warn(options, `Ignoring custom tool description '${filePath}' because it rendered empty.`);
+        continue;
+      }
+      return rendered;
+    } catch (error) {
+      warn(
+        options,
+        `Failed to read custom tool description '${filePath}': ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  return undefined;
 }
 
 function withMandatorySafetyGuidance(description: string): string {
-	const customDescription = description
-		.split(SUBAGENT_SAFETY_GUIDANCE)
-		.flatMap((part) => part.split(SUBAGENT_FAILURE_RECOVERY_GUIDANCE))
-		.map((part) => part.trim())
-		.filter(Boolean)
-		.join("\n\n");
-	return customDescription
-		? `${customDescription}\n\n${SUBAGENT_SAFETY_GUIDANCE}`
-		: SUBAGENT_SAFETY_GUIDANCE;
+  const customDescription = description
+    .split(SUBAGENT_SAFETY_GUIDANCE)
+    .flatMap((part) => part.split(SUBAGENT_FAILURE_RECOVERY_GUIDANCE))
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join("\n\n");
+  return customDescription ? `${customDescription}\n\n${SUBAGENT_SAFETY_GUIDANCE}` : SUBAGENT_SAFETY_GUIDANCE;
 }
 
-export function buildSubagentToolDescription(config: Pick<ExtensionConfig, "toolDescriptionMode"> = {}, options?: ToolDescriptionOptions): string {
-	if (config.toolDescriptionMode === undefined) return DEFAULT_SUBAGENT_TOOL_DESCRIPTION;
-	const mode = resolveToolDescriptionMode(config, options);
-	let description: string;
-	if (mode === "compact") description = COMPACT_SUBAGENT_TOOL_DESCRIPTION;
-	else if (mode === "custom") {
-		const custom = loadCustomToolDescription(options);
-		if (custom) description = withMandatorySafetyGuidance(custom);
-		else {
-			warn(options, `${CUSTOM_TOOL_DESCRIPTION_FILE} was not found or valid for toolDescriptionMode "custom"; using full description.`);
-			description = FULL_SUBAGENT_TOOL_DESCRIPTION;
-		}
-	} else description = FULL_SUBAGENT_TOOL_DESCRIPTION;
-	return description;
+export function buildSubagentToolDescription(
+  config: Pick<ExtensionConfig, "toolDescriptionMode"> = {},
+  options?: ToolDescriptionOptions,
+): string {
+  if (config.toolDescriptionMode === undefined) return DEFAULT_SUBAGENT_TOOL_DESCRIPTION;
+  const mode = resolveToolDescriptionMode(config, options);
+  let description: string;
+  if (mode === "compact") description = COMPACT_SUBAGENT_TOOL_DESCRIPTION;
+  else if (mode === "custom") {
+    const custom = loadCustomToolDescription(options);
+    if (custom) description = withMandatorySafetyGuidance(custom);
+    else {
+      warn(
+        options,
+        `${CUSTOM_TOOL_DESCRIPTION_FILE} was not found or valid for toolDescriptionMode "custom"; using full description.`,
+      );
+      description = FULL_SUBAGENT_TOOL_DESCRIPTION;
+    }
+  } else description = FULL_SUBAGENT_TOOL_DESCRIPTION;
+  return description;
 }

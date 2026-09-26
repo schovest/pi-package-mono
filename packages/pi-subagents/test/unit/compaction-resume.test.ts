@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { describe, it } from "node:test";
+import { fileURLToPath } from "node:url";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 describe("async compaction resume", () => {
-	it("only re-drives manual compaction while async work is active", () => {
-		const script = String.raw`
+  it("only re-drives manual compaction while async work is active", () => {
+    const script = String.raw`
 			import os from "node:os";
 			import path from "node:path";
 			import registerSubagentExtension from "./index.ts";
@@ -74,14 +74,25 @@ describe("async compaction resume", () => {
 			if (!widgets.some(([_, value]) => value !== undefined)) throw new Error("widgets did not recover after compaction failure");
 			for (const handler of handlers.get("session_shutdown")) await handler();
 		`;
-		const env = { ...process.env };
-		delete env.PI_SUBAGENT_CHILD;
-		execFileSync(process.execPath, ["--experimental-strip-types", "--import", "./test/support/register-loader.mjs", "--input-type=module", "--eval", script], { cwd: projectRoot, env, stdio: "pipe" });
-		assert.ok(true);
-	});
+    const env = { ...process.env };
+    delete env.PI_SUBAGENT_CHILD;
+    execFileSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        "--import",
+        "./test/support/register-loader.mjs",
+        "--input-type=module",
+        "--eval",
+        script,
+      ],
+      { cwd: projectRoot, env, stdio: "pipe" },
+    );
+    assert.ok(true);
+  });
 
-	it("ignores stale cached UI context during compaction lifecycle callbacks", () => {
-		const script = String.raw`
+  it("ignores stale cached UI context during compaction lifecycle callbacks", () => {
+    const script = String.raw`
 			import registerSubagentExtension from "./index.ts";
 			const handlers = new Map();
 			const events = { listeners: new Map(), on(name, handler) { this.listeners.set(name, handler); return () => this.listeners.delete(name); }, emit(name, payload) { this.listeners.get(name)?.(payload); } };
@@ -104,9 +115,20 @@ describe("async compaction resume", () => {
 			for (const handler of handlers.get("session_before_compact")) await handler({ reason: "threshold", signal: new AbortController().signal });
 			for (const handler of handlers.get("session_shutdown")) await handler();
 		`;
-		const env = { ...process.env };
-		delete env.PI_SUBAGENT_CHILD;
-		execFileSync(process.execPath, ["--experimental-strip-types", "--import", "./test/support/register-loader.mjs", "--input-type=module", "--eval", script], { cwd: projectRoot, env, stdio: "pipe" });
-		assert.ok(true);
-	});
+    const env = { ...process.env };
+    delete env.PI_SUBAGENT_CHILD;
+    execFileSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        "--import",
+        "./test/support/register-loader.mjs",
+        "--input-type=module",
+        "--eval",
+        script,
+      ],
+      { cwd: projectRoot, env, stdio: "pipe" },
+    );
+    assert.ok(true);
+  });
 });

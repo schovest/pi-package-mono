@@ -1,6 +1,6 @@
 export {
-	registerRequiredChildExtensions,
-	type RegisterRequiredChildExtensionsInput,
-	type RequiredChildExtension,
-	type RequiredChildExtensionRegistration,
+  registerRequiredChildExtensions,
+  type RegisterRequiredChildExtensionsInput,
+  type RequiredChildExtension,
+  type RequiredChildExtensionRegistration,
 } from "../shared/required-child-extensions.ts";

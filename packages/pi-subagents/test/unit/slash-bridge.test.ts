@@ -12,7 +12,11 @@ function eventBus() {
       const list = handlers.get(event) ?? [];
       list.push(handler);
       handlers.set(event, list);
-      return () => handlers.set(event, (handlers.get(event) ?? []).filter((h) => h !== handler));
+      return () =>
+        handlers.set(
+          event,
+          (handlers.get(event) ?? []).filter((h) => h !== handler),
+        );
     },
     emit(event: string, data: unknown) {
       for (const handler of handlers.get(event) ?? []) handler(data);

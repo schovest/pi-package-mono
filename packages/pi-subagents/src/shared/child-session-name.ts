@@ -25,24 +25,20 @@ const TASK_EXCERPT_MAX_CHARS = 60;
 export const CHILD_SESSION_NAME_MAX_CHARS = 80;
 
 export function deriveChildSessionName(input: {
-	agent?: string;
-	task?: string;
-	/** Workflow node label; preferred over the task excerpt when present. */
-	label?: string;
+  agent?: string;
+  task?: string;
+  /** Workflow node label; preferred over the task excerpt when present. */
+  label?: string;
 }): string | undefined {
-	const agent = input.agent?.trim() ?? "";
-	const rawLabel = input.label?.trim() ?? "";
-	const rawTask = input.task?.trim() ?? "";
-	// Never build a name from redacted text — the excerpt would be meaningless
-	// and the redaction marker itself carries no information.
-	const excerptSource =
-		rawLabel && rawLabel !== PROMPT_REDACTED
-			? rawLabel
-			: rawTask && rawTask !== PROMPT_REDACTED
-				? rawTask
-				: "";
-	const excerpt = excerptSource ? previewDisplayText(excerptSource, TASK_EXCERPT_MAX_CHARS) : "";
-	const base = agent && excerpt ? `${agent}: ${excerpt}` : agent || excerpt;
-	if (!base) return undefined;
-	return previewDisplayText(base, CHILD_SESSION_NAME_MAX_CHARS);
+  const agent = input.agent?.trim() ?? "";
+  const rawLabel = input.label?.trim() ?? "";
+  const rawTask = input.task?.trim() ?? "";
+  // Never build a name from redacted text — the excerpt would be meaningless
+  // and the redaction marker itself carries no information.
+  const excerptSource =
+    rawLabel && rawLabel !== PROMPT_REDACTED ? rawLabel : rawTask && rawTask !== PROMPT_REDACTED ? rawTask : "";
+  const excerpt = excerptSource ? previewDisplayText(excerptSource, TASK_EXCERPT_MAX_CHARS) : "";
+  const base = agent && excerpt ? `${agent}: ${excerpt}` : agent || excerpt;
+  if (!base) return undefined;
+  return previewDisplayText(base, CHILD_SESSION_NAME_MAX_CHARS);
 }

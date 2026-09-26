@@ -43,11 +43,17 @@ const script = String.raw`
 `;
 
 describe("extension maintenance lifecycle", () => {
-	it("starts session-owned maintenance at session_start and cleans it at shutdown", () => {
-		const result = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "--eval", script], {
-			cwd: process.cwd(), encoding: "utf-8", env: { ...process.env, PI_SUBAGENT_CHILD: undefined },
-		});
-		assert.equal(result.status, 0, result.stderr);
-		assert.deepEqual(JSON.parse(result.stdout), { atFactory: 0, atStart: 3, atRepeatedStart: 3, atShutdown: 0 });
-	});
+  it("starts session-owned maintenance at session_start and cleans it at shutdown", () => {
+    const result = spawnSync(
+      process.execPath,
+      ["--experimental-strip-types", "--input-type=module", "--eval", script],
+      {
+        cwd: process.cwd(),
+        encoding: "utf-8",
+        env: { ...process.env, PI_SUBAGENT_CHILD: undefined },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), { atFactory: 0, atStart: 3, atRepeatedStart: 3, atShutdown: 0 });
+  });
 });

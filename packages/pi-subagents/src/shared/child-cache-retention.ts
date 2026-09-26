@@ -12,7 +12,7 @@ import type { StreamFn } from "@earendil-works/pi-agent-core";
  * before this setting existed.
  */
 export function childCacheRetention(env: NodeJS.ProcessEnv = process.env): string | undefined {
-	return env.PI_SUBAGENT_CACHE_RETENTION || undefined;
+  return env.PI_SUBAGENT_CACHE_RETENTION || undefined;
 }
 
 /**
@@ -20,8 +20,8 @@ export function childCacheRetention(env: NodeJS.ProcessEnv = process.env): strin
  * inherits the parent's `PI_CACHE_RETENTION` rather than having it cleared.
  */
 export function childCacheRetentionEnv(env?: NodeJS.ProcessEnv): { PI_CACHE_RETENTION?: string } {
-	const retention = childCacheRetention(env);
-	return retention ? { PI_CACHE_RETENTION: retention } : {};
+  const retention = childCacheRetention(env);
+  return retention ? { PI_CACHE_RETENTION: retention } : {};
 }
 
 /**
@@ -31,13 +31,13 @@ export function childCacheRetentionEnv(env?: NodeJS.ProcessEnv): { PI_CACHE_RETE
  * against a parent turn streaming concurrently.
  */
 export function pinChildCacheRetention(agent: { streamFunction: StreamFn } | undefined, env?: NodeJS.ProcessEnv): void {
-	if (!agent?.streamFunction) return;
-	const retention = childCacheRetention(env);
-	if (!retention) return;
-	const base = agent.streamFunction;
-	agent.streamFunction = (model, context, options) =>
-		base(model, context, {
-			...options,
-			env: { ...(options?.env ?? {}), PI_CACHE_RETENTION: retention },
-		});
+  if (!agent?.streamFunction) return;
+  const retention = childCacheRetention(env);
+  if (!retention) return;
+  const base = agent.streamFunction;
+  agent.streamFunction = (model, context, options) =>
+    base(model, context, {
+      ...options,
+      env: { ...(options?.env ?? {}), PI_CACHE_RETENTION: retention },
+    });
 }

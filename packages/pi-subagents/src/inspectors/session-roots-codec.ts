@@ -11,21 +11,21 @@
  * a way that could still fail as new characters are added upstream.
  */
 export function encodeSessionRoots(roots: readonly string[]): string {
-	return Buffer.from(JSON.stringify(roots), "utf-8").toString("base64");
+  return Buffer.from(JSON.stringify(roots), "utf-8").toString("base64");
 }
 
 function parseStringArray(value: unknown): string[] | undefined {
-	if (!Array.isArray(value) || value.some((root) => typeof root !== "string")) return undefined;
-	return value;
+  if (!Array.isArray(value) || value.some((root) => typeof root !== "string")) return undefined;
+  return value;
 }
 
 /** Decodes a `--session-roots` argument produced by {@link encodeSessionRoots}. */
 export function decodeSessionRoots(raw: string): string[] {
-	try {
-		const decoded = parseStringArray(JSON.parse(Buffer.from(raw, "base64").toString("utf-8")));
-		if (decoded) return decoded;
-	} catch {
-		// Report one stable validation error below.
-	}
-	throw new Error("--session-roots must be a base64-encoded JSON array of strings.");
+  try {
+    const decoded = parseStringArray(JSON.parse(Buffer.from(raw, "base64").toString("utf-8")));
+    if (decoded) return decoded;
+  } catch {
+    // Report one stable validation error below.
+  }
+  throw new Error("--session-roots must be a base64-encoded JSON array of strings.");
 }

@@ -1,9 +1,9 @@
 {
 	"compilerOptions": {
-		"target": "ES2022",
-		"module": "Node16",
-		"moduleResolution": "Node16",
-		"lib": ["ES2022"],
+		"target": "ES2023",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"lib": ["ES2023"],
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
@@ -14,5 +14,10 @@
 		"types": ["node"]
 	},
 	"include": ["packages/*/**/*.ts", "test/**/*.ts", "vitest.config.ts"],
-	"exclude": ["**/node_modules/**", "**/.pi/**", "**/dist/**"]
+	"exclude": [
+		"**/node_modules/**",
+		"**/.pi/**",
+		"**/dist/**",
+		"packages/pi-subagents/test/**"
+	]
 }

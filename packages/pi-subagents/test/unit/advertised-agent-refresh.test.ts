@@ -3,27 +3,35 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { it } from "node:test";
+import { fileURLToPath } from "node:url";
 import { SUBAGENT_CHILD_ENV } from "../../src/runs/shared/child-runtime-config.ts";
-import { PI_CODING_AGENT_PACKAGE_ROOT_ENV } from "../../src/shared/utils.ts";
 import { resolveInstalledPiPackageRoot } from "../../src/runs/shared/pi-spawn.ts";
+import { PI_CODING_AGENT_PACKAGE_ROOT_ENV } from "../../src/shared/utils.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
 it("emits bounded file-only snapshots, refreshes through management, and performs zero prompt-time filesystem calls", () => {
-	const home = fs.mkdtempSync(path.join(os.tmpdir(), "advertised-refresh-"));
-	const env = { ...process.env, PI_CODING_AGENT_DIR: home };
-	delete env[SUBAGENT_CHILD_ENV];
-	// The activation gate trusts the running host or an explicit override, and this
-	// subprocess runs under the test runner, so declare the SDK host it simulates
-	// instead of relying on a copy next to the checkout.
-	if (!env[PI_CODING_AGENT_PACKAGE_ROOT_ENV]) {
-		const hostRoot = resolveInstalledPiPackageRoot();
-		if (hostRoot) env[PI_CODING_AGENT_PACKAGE_ROOT_ENV] = hostRoot;
-	}
-	try {
-		const output = execFileSync(process.execPath, ["--experimental-strip-types", "--import", "./test/support/register-loader.mjs", "--input-type=module", "--eval", String.raw`
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "advertised-refresh-"));
+  const env = { ...process.env, PI_CODING_AGENT_DIR: home };
+  delete env[SUBAGENT_CHILD_ENV];
+  // The activation gate trusts the running host or an explicit override, and this
+  // subprocess runs under the test runner, so declare the SDK host it simulates
+  // instead of relying on a copy next to the checkout.
+  if (!env[PI_CODING_AGENT_PACKAGE_ROOT_ENV]) {
+    const hostRoot = resolveInstalledPiPackageRoot();
+    if (hostRoot) env[PI_CODING_AGENT_PACKAGE_ROOT_ENV] = hostRoot;
+  }
+  try {
+    const output = execFileSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        "--import",
+        "./test/support/register-loader.mjs",
+        "--input-type=module",
+        "--eval",
+        String.raw`
 			import assert from "node:assert/strict";
 			import fs from "node:fs";
 			import path from "node:path";
@@ -164,9 +172,12 @@ it("emits bounded file-only snapshots, refreshes through management, and perform
 			refresh();
 			assert.equal(noIo(() => emit(prompt)), "base");
 			process.stdout.write("prompt contracts passed; zero prompt-time stat/readdir/readFile calls at 0, 250, and 277 definitions");
-		`], { cwd: root, env, encoding: "utf8", timeout: 60_000 });
-		assert.match(output, /prompt contracts passed/);
-	} finally {
-		fs.rmSync(home, { recursive: true, force: true });
-	}
+		`,
+      ],
+      { cwd: root, env, encoding: "utf8", timeout: 60_000 },
+    );
+    assert.match(output, /prompt contracts passed/);
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
 });
