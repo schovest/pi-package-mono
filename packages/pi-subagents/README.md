@@ -4,6 +4,12 @@
 
 # pi-subagents
 
+> **Fork**: `@schovest/pi-subagents` is a fork of [nicobailon/pi-subagents](https://github.com/nicobailon/pi-subagents) `v0.71.0`, maintained in [schovest/pi-package-mono](https://github.com/schovest/pi-package-mono). Fork changes:
+>
+> 1. Removed the builtin external CLI adapter agents: `claude-code`/`-writer`, `codex-exec`/`-writer`, `cursor-agent`/`-writer`.
+> 2. Removed the legacy `~/.agents` and `<root>/.agents` agent discovery sources. Agent definitions load from `<root>/.pi/agents`, `~/.pi/agent/agents`, npm package providers, `PI_SUBAGENT_EXTRA_AGENT_DIRS`, settings `agentScanDirs`/`agentExcludeDirs`, and chains.
+>
+> Install: `pi install npm:@schovest/pi-subagents`
 `pi-subagents` lets Pi delegate work to focused child agents. Use it for code review, scouting, implementation, parallel audits, saved workflows, background jobs, and anything else that benefits from a second or third set of model eyes.
 
 <https://github.com/user-attachments/assets/702554ec-faaf-4635-80aa-fb5d6e292fd1>
@@ -11,7 +17,7 @@
 ## Install
 
 ```bash
-pi install npm:pi-subagents
+pi install npm:@schovest/pi-subagents
 ```
 
 That is the only required step. Background children use the host's SDK: npm Pi keeps its detached Node runner; the official Pi 0.86.1 Linux x64 standalone release loads the same runner through Pi's embedded SDK, without a separate SDK install. See [Standalone background execution](docs/standalone-background.md) for the supported boundary and validation gate.

@@ -11,7 +11,7 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 - 发布原始 `.ts` 源码，不做构建
 - 每个包独立维护版本号（见「版本管理」）
 
-当前包（11 个）：
+当前包（12 个）：
 
 | 包 | 说明 | 发布 |
 | --- | --- | --- |
@@ -25,6 +25,7 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 | `pi-mcp-adapter` | MCP 适配器 | ✅ |
 | `pi-sudo-helper` | sudo 密码注入 | ✅ |
 | `pi-tps` | tokens-per-second 监控 | ✅ |
+| `pi-subagents` | 子 agent 委托 + 脚本化多 agent 工作流（fork 自 nicobailon/pi-subagents） | ✅ |
 | `pi-hermes-memory` | 🧠 持久记忆 + 会话搜索 + 学习循环（SQLite FTS5） | ✅（未首发） |
 
 `pi-btw`/`pi-todo`/`pi-ask-user-question`/`pi-config`/`pi-i18n` 基于
@@ -41,6 +42,30 @@ LICENSE 保留上游 Chandra Teja 版权署名；上游未发布修复 #189（ch
 `pi-goal`（目录 `packages/pi-goal`）迁移自 [narumiruna/pi-extensions](https://github.com/narumiruna/pi-extensions) `packages/pi-goal` v0.52.2（npm tarball 与 tag 源一致）。
 **移植约定**：相对导入保留 `.js` 后缀；src 全量搬运，旧弱实现（单文件 index.ts）已删除；`scripts/build-runtime.mjs`、`dist/` 产物与 3 个 dist 构建测试（build-runtime/generated-entry/goal-runtime-smoke）不适用已裁掉；`test/support.ts`（createMockPi/createMockContext）放在仓根 `test/`，上游 `../../../test/support.js` 相对导入保持不变；persistence 子进程测试已改为 `--import tsx` + 源码路径（上游用 node_modules/.cache 构建产物）。
 **降级兼容（关键）**：上游依赖 pi-tui 0.84+ 的 `stripTerminalSequences`（0.80.5 缺失 → goal_complete 报 `is not a function`）；`src/terminal-compat.ts` 用命名空间导入 + 探测（`??` 回退本地等价实现，逻辑与上游 extractAnsiCode/stripTerminalSequences 一致），errors.ts 改从该模块导入。升级上游后若 pi-tui 已导出该函数，命中断言：本包 devDeps 固定在 0.80.5，勿随上游升到 0.84（除非同时加兼容层）。
+
+`pi-subagents`（目录 `packages/pi-subagents`）迁移自 [nicobailon/pi-subagents](https://github.com/nicobailon/pi-subagents)
+tag v0.71.0（GitHub tarball，非 main HEAD）。
+**移植约定**：相对导入保留 `.ts` 后缀（上游原生风格）；src/test/docs/skills/prompts 全量搬运
+（src 290 ts + 根 index.ts、test 257 unit + 44 integration + 1 smoke）；307→302 个测试文件（上游 tag 实数）
+全部适配 vitest（root vitest projects 拆分为 core / pi-subagents 两个 project；包内测试用
+`test/support/vitest.setup.ts` 复刻上游 isolated-temp-root 隔离 + `PI_SUBAGENTS_TEST_LOADER=test-file`
+标记 + `process.chdir` 包根，不加载 root setup）；root tsconfig base 升 ES2023 + NodeNext
+（上游 src 用 import attributes，Node16 不支持），pi-subagents 的 test/** 在 root tsc 中排除
+（上游 tsconfig 即不检查测试，2490 处测试类型债不引入；src 全量类型检查通过）；
+LICENSE 保留 Nico Bailon 版权署名；上游 oxlint 配置与 `anti-slop-oxlint` 测试不适用已裁掉。
+**定制改动（同步上游时必须重放）**：
+1. 删除 builtin CLI 适配器 agent：claude-code/-writer、codex-exec/-writer、cursor-agent/-writer
+   （agents/ 6 个 md + `src/agents/builtin-names.ts` 同步删项）；适配器机制（external-cli-contract、
+   3 个 adapter 模块、workflow runner.adapter、herdr 外置适配器）**保留不动**，相关文档保留；
+2. 删除 `~/.agents`（userDirNew + userDir 三态回退）与 `<root>/.agents`（resolveNearestProjectAgentDirs
+   的 legacyDir）两个 legacy 发现源及 `isLegacyAgentSkillPath`；`.agents/skills` 仍是 skill 发现源、
+   `.agents` 仍参与 projectRoot 探测（getProjectConfigDir 之外）——均**保留不动**；
+3. 保留 7 个 builtin（advisor/delegate/evidence-auditor/oracle/researcher/reviewer/scout/worker 中的
+   7 个有定义文件者）、`<root>/.pi/agents`、`~/.pi/agent/agents`、npm package 源、
+   `PI_SUBAGENT_EXTRA_AGENT_DIRS`、settings `agentScanDirs`/`agentExcludeDirs`、chains；
+4. `@schovest/pi-subagents` 为公开包（无 private，区别于上游 source-checkout 必须 private 的测试断言，
+   相关测试已适配）；devDeps 嵌套 `@earendil-works/pi-*@0.87.1`（peer 要求 `pi-ai>=0.86.1`，
+   与其余包的 0.80.5 并存，勿混升）；typebox 用 `^1.3.0`（peer optional + devDep）。
 
 ### 代码风格
 

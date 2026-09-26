@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0
+
+Fork of nicobailon/pi-subagents v0.71.0, published as `@schovest/pi-subagents`.
+
+- Removed builtin external CLI adapter agents: `claude-code`/`-writer`, `codex-exec`/`-writer`, `cursor-agent`/`-writer`.
+- Removed legacy `~/.agents` and `<root>/.agents` agent discovery sources (and the `.agents/skills` exclusion workaround).
+- Everything else unchanged: builtin `scout`/`researcher`/`evidence-auditor`/`worker`/`reviewer`/`oracle`/`delegate`, project `<root>/.pi/agents`, user `~/.pi/agent/agents`, npm package providers, `PI_SUBAGENT_EXTRA_AGENT_DIRS`, settings `agentScanDirs`/`agentExcludeDirs`, and chains.
+
 ## [Unreleased]
 
 ## [0.71.0] - 2026-09-23
