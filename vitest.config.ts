@@ -25,7 +25,7 @@ export default defineConfig({
       {
         test: {
           name: "pi-subagents",
-          include: ["packages/pi-subagents/test/**/*.test.ts"],
+          include: ["packages/pi-subagents/test/**/*.test.ts", "packages/pi-subagents/ship-manifest.test.ts"],
           setupFiles: ["./packages/pi-subagents/test/support/vitest.setup.ts"],
           hookTimeout: 60_000,
           testTimeout: 60_000,

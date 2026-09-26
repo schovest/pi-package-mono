@@ -14,7 +14,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SKIP_DIRS = new Set(["node_modules", "docs"]);
+const SKIP_DIRS = new Set(["node_modules", "docs", "test"]);
 const SKIP_FILES = new Set(["test-fixtures.ts"]);
 
 export interface ShipManifestResult {
