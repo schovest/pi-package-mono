@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { test } from "node:test";
 import {
   fauxAssistantMessage,
   fauxProvider,
@@ -17,6 +16,7 @@ import {
   SettingsManager,
   createAgentSession,
 } from "@earendil-works/pi-coding-agent";
+import { test, vi } from "vitest";
 import { createSubagentParamsSchema } from "../../src/extension/schemas.ts";
 import { resolveInstalledPiPackageRoot } from "../../src/runs/shared/pi-spawn.ts";
 import { PI_CODING_AGENT_PACKAGE_ROOT_ENV } from "../../src/shared/utils.ts";
@@ -49,7 +49,9 @@ test(
     delete process.env.PI_SUBAGENT_CHILD;
     let session: Awaited<ReturnType<typeof createAgentSession>>["session"] | undefined;
     try {
-      const { default: registerSubagentExtension } = await import(`../../index.ts?native-activation=${Date.now()}`);
+      // 移植适配：vitest 不支持 ?query 动态导入，用 resetModules 保证每次拿到全新模块实例。
+      vi.resetModules();
+      const { default: registerSubagentExtension } = await import("../../index.ts");
       const faux = fauxProvider({ provider: "tool-activation", models: [{ id: "local" }], tokensPerSecond: 100_000 });
       const captured: number[] = [];
       faux.setResponses([
