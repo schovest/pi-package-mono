@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+Pipeline verification release: no code changes since 0.1.0. Published to validate the npm Trusted Publishing flow and the resilient CI publish step (`scripts/publish-packages.mjs`).
+
 ## 0.1.0
 
 Fork of nicobailon/pi-subagents v0.71.0, published as `@schovest/pi-subagents`.
