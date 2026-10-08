@@ -19,7 +19,7 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 | `pi-todo` | `todo` 工具 + `/todos` 命令 + 实时覆盖层（存活 compaction） | ✅ |
 | `pi-ask-user-question` | `ask_user_question` 分页签对话框工具 | ✅ |
 | `pi-config` | 共享配置 I/O（configPath/loadJsonConfig 等） | ❌（2026-10-08 起止版，private） |
-| `pi-i18n` | 本地化基础（locale 检测、/loader 子路径、软可选） | ✅ |
+| `pi-i18n` | 本地化基础（locale 检测、/loader 子路径、软可选） | ❌（2026-10-08 起止版，private） |
 | `pi-test-utils` | 测试夹具（verifyShipManifest、mock Pi 等） | ❌ private |
 | `pi-goal` | goal 自主编排扩展（迁移自 narumitw/pi-goal，含 pi-tui 降级兼容） | ✅ |
 | `pi-mcp-adapter` | MCP 适配器 | ✅ |
@@ -101,6 +101,7 @@ LICENSE 保留 Nico Bailon 版权署名；上游 oxlint 配置与 `anti-slop-oxl
 - `pi-test-utils` — private，仓内测试夹具
 - `pi-config` — 2026-10-08 起停止发布：npm 止版 0.1.3，package.json 已标 `private: true`；本地 0.1.4
   （typebox peer 修复）不随发布，npm 侧用户停留 0.1.3，属预期而非事故
+- `pi-i18n` — 2026-10-08 起停止发布：npm 止版 0.1.3，package.json 已标 `private: true`（与本地版本一致，无未发布差异）
 
 CI 自动发布（push main 触发，`.github/workflows/publish.yml`）——**日常迭代的标准发布通道**：
 

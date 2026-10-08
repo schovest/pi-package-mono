@@ -1,6 +1,7 @@
 {
 	"name": "@schovest/pi-i18n",
 	"version": "0.1.3",
+	"private": true,
 	"description": "Pi extension. The localization foundation for rpiv-* skills: locale detection, the /languages command, the --locale flag, and a cross-package locale registry.",
 	"type": "module",
 	"types": "./i18n.ts",
