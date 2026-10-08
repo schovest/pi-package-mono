@@ -157,13 +157,19 @@ describe("native supervisor channel", () => {
       );
       const readdir = fsDefault.readdirSync;
       let scans = 0;
+      // node22 的 fs.rmSync(recursive) 内部走 JS 层 readdirSync，且 node:internal/fs/rimraf 会永久捕获
+      // syncBuiltinESMExports 时的引用（事后恢复无效）。stub 仅在协调器扫描窗口（armed）内断言，
+      // 窗口外（含 afterEach 清理的 rimraf 内部调用）一律透传原生，避免污染进程内后续 rmSync。
+      let armed = false;
       fsDefault.readdirSync = ((dir: fs.PathLike, options: unknown) => {
-        assert.equal(
-          String(dir),
-          path.join(ownDir, "requests"),
-          "coordinators must not scan unrelated retained channels",
-        );
-        scans++;
+        if (armed) {
+          assert.equal(
+            String(dir),
+            path.join(ownDir, "requests"),
+            "coordinators must not scan unrelated retained channels",
+          );
+          scans++;
+        }
         return (readdir as (dir: fs.PathLike, options: unknown) => unknown)(dir, options);
       }) as typeof fsDefault.readdirSync;
       syncBuiltinESMExports();
@@ -171,6 +177,7 @@ describe("native supervisor channel", () => {
         channel.registerTools();
         assert.ok(tools.has(NATIVE_SUPERVISOR_TOOL_NAME));
         assert.equal(scans, 0, "tool registration does not start transport");
+        armed = true;
         channel.start();
         assert.equal(tick, undefined, "idle coordinator has no polling timer");
         assert.equal(scans, 0);
@@ -187,7 +194,9 @@ describe("native supervisor channel", () => {
         tick!();
         assert.equal(tick, undefined, "finished descendants stop polling on every platform");
         assert.equal(scans, scansBeforeIdle);
+        armed = false;
       } finally {
+        armed = false;
         channel.dispose();
         fsDefault.readdirSync = readdir;
         syncBuiltinESMExports();
@@ -439,19 +448,22 @@ describe("native supervisor channel", () => {
       },
     );
     const readdir = fsDefault.readdirSync;
+    // armed 窗口外透传：rimraf 会永久捕获本 stub（node22），afterEach 的 rmSync 必须正常工作。
+    let armed = false;
 
     try {
       channel.start();
       assert.equal(typeof tick, "function");
       let injectUnknown = true;
       fsDefault.readdirSync = ((dir: fs.PathLike, options?: unknown) => {
-        if (injectUnknown) {
+        if (armed && injectUnknown) {
           injectUnknown = false;
           throw Object.assign(new Error("directory disappeared"), { code: "UNKNOWN" });
         }
         return (readdir as (dir: fs.PathLike, options?: unknown) => unknown)(dir, options);
       }) as typeof fsDefault.readdirSync;
       syncBuiltinESMExports();
+      armed = true;
 
       assert.doesNotThrow(() => tick!());
       const requestId = writeRequest({ sessionId: currentSessionId, runId });
@@ -460,7 +472,9 @@ describe("native supervisor channel", () => {
         sent.map((message) => message.details?.id),
         [requestId],
       );
+      armed = false;
     } finally {
+      armed = false;
       channel.dispose();
       fsDefault.readdirSync = readdir;
       syncBuiltinESMExports();
@@ -480,10 +494,13 @@ describe("native supervisor channel", () => {
       { platform: "linux" },
     );
     const readdir = fsDefault.readdirSync;
+    // armed 窗口外透传：rimraf 会永久捕获本 stub（node22），窗口外的任何 readdirSync 都必须正常返回。
+    let armed = true;
 
     try {
-      fsDefault.readdirSync = (() => {
-        throw Object.assign(new Error("unexpected scan failure"), { code: "UNKNOWN" });
+      fsDefault.readdirSync = ((dir: fs.PathLike, options?: unknown) => {
+        if (armed) throw Object.assign(new Error("unexpected scan failure"), { code: "UNKNOWN" });
+        return (readdir as (dir: fs.PathLike, options?: unknown) => unknown)(dir, options);
       }) as typeof fsDefault.readdirSync;
       syncBuiltinESMExports();
 
@@ -491,7 +508,9 @@ describe("native supervisor channel", () => {
         () => channel.findPendingAsks({ runId: "run", agent: "worker", childIndex: 0 }),
         (error: NodeJS.ErrnoException) => error.code === "UNKNOWN",
       );
+      armed = false;
     } finally {
+      armed = false;
       channel.dispose();
       fsDefault.readdirSync = readdir;
       syncBuiltinESMExports();
