@@ -18,7 +18,7 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 | `pi-btw` | `/btw` 侧问命令（底部面板，答案不落盘） | ✅ |
 | `pi-todo` | `todo` 工具 + `/todos` 命令 + 实时覆盖层（存活 compaction） | ✅ |
 | `pi-ask-user-question` | `ask_user_question` 分页签对话框工具 | ✅ |
-| `pi-config` | 共享配置 I/O（configPath/loadJsonConfig 等） | ✅ |
+| `pi-config` | 共享配置 I/O（configPath/loadJsonConfig 等） | ❌（2026-10-08 起止版，private） |
 | `pi-i18n` | 本地化基础（locale 检测、/loader 子路径、软可选） | ✅ |
 | `pi-test-utils` | 测试夹具（verifyShipManifest、mock Pi 等） | ❌ private |
 | `pi-goal` | goal 自主编排扩展（迁移自 narumitw/pi-goal，含 pi-tui 降级兼容） | ✅ |
@@ -94,14 +94,20 @@ LICENSE 保留 Nico Bailon 版权署名；上游 oxlint 配置与 `anti-slop-oxl
 
 ### 发布
 
-发布脚本与 CI 都按「当前版本已发布则跳过、未发布则发布」逐包执行，`private: true` 的包永不发布
-（如 pi-test-utils）。
+发布脚本与 CI 都按「当前版本已发布则跳过、未发布则发布」逐包执行，`private: true` 的包永不发布。
+
+**永不发布的包**（新会话勿为其升版/发布，CI 也会跳过）：
+
+- `pi-test-utils` — private，仓内测试夹具
+- `pi-config` — 2026-10-08 起停止发布：npm 止版 0.1.3，package.json 已标 `private: true`；本地 0.1.4
+  （typebox peer 修复）不随发布，npm 侧用户停留 0.1.3，属预期而非事故
 
 CI 自动发布（push main 触发，`.github/workflows/publish.yml`）——**日常迭代的标准发布通道**：
 
 - npm **Trusted Publishing（OIDC）** 认证，无需 token；每个包需在 npmjs.com 配置 Trusted Publisher
   （schovest / pi-package-mono / publish.yml）
-- 逐包跳过已发布版本与 private 包
+- 逐包跳过已发布版本与 private 包；CI publish 步骤调用 `scripts/publish-packages.mjs`（与本地
+  同一脚本），单包发布失败不阻断后续包，结束汇总失败清单并以非零码退出
 - 依赖 `package.json` 的 `repository` 字段与 GitHub 仓库匹配（所有包已配置）
 - 工具链要求：Node ≥ 22.14、npm ≥ 11.5.1（CI 用 node 24）
 

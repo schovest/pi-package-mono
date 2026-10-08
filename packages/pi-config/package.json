@@ -1,6 +1,7 @@
 {
 	"name": "@schovest/pi-config",
 	"version": "0.1.4",
+	"private": true,
 	"description": "Shared config I/O utilities for pi-package-mono sibling packages",
 	"type": "module",
 	"types": "./index.ts",

@@ -30,21 +30,5 @@ jobs:
       - run: npm run test
 
       - name: Publish workspace packages (OIDC trusted publishing, skip already-published versions)
-        run: |
-          set -e
-          set -o pipefail
-          for dir in packages/*/; do
-            name=$(node -p "require('./${dir}package.json').name")
-            version=$(node -p "require('./${dir}package.json').version")
-            private=$(node -p "require('./${dir}package.json').private || false")
-            if [ "$private" = "true" ]; then
-              echo "skip $name@$version (private, not published)"
-              continue
-            fi
-            if npm view "$name@$version" version >/dev/null 2>&1; then
-              echo "skip $name@$version (already published)"
-              continue
-            fi
-            echo "publish $name@$version"
-            npm publish --workspace "$name" --access public
-          done
+        # 逐包容错：单包失败不阻断后续包，结束汇总后以非零码退出（见 scripts/publish-packages.mjs）
+        run: node scripts/publish-packages.mjs
