@@ -69,7 +69,9 @@ import {
 } from "../support/async-execution-fixture.ts";
 import { events, createEventBus, createTempDir, makeAgent, makeMinimalCtx, removeTempDir } from "../support/helpers.ts";
 
-const WATCH_TIMEOUT_MS = 30_000;
+// CI 争抢下 runner 轮询→抛错→落盘→退出→parent finalize 链路偶发超 30s（publish workflow 两连挂），
+// 与 pi-subagents 项目 testTimeout/hookTimeout（60s）对齐。
+const WATCH_TIMEOUT_MS = 60_000;
 
 // A runner that never starts or never settles must fail this test by name, not stall the whole CI step.
 function watchTimeoutMessage(what: string, asyncDir: string): string {
