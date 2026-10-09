@@ -57,6 +57,19 @@ pi -e ./packages/pi-goal
 
 This package publishes raw TypeScript source (`src/index.ts`), no build step is needed.
 
+## 🔀 Differences from upstream (@narumitw/pi-goal)
+
+This package is a faithful port of [`@narumitw/pi-goal`](https://www.npmjs.com/package/@narumitw/pi-goal) **v0.52.2** (npm tarball, 2026-08-20). The runtime code under `src/` is isomorphic to that baseline — same state machine, `/goal` commands, the three Goal tools, prompts, persistence format, and settings; the `src/` deltas are limited to code formatting and the compat import described below. **The feature set is identical to upstream v0.52.2: nothing was added, removed, or redesigned.**
+
+Local differences are engineering/packaging only:
+
+1. **pi-tui downgrade-compat layer** — upstream imports `stripTerminalSequences` from `@earendil-works/pi-tui`, an export that only exists in pi-tui 0.84+. Here that import is routed through `src/terminal-compat.ts`, which probes the host pi-tui at runtime and falls back to a local equivalent implementation, so the package also runs on pi-tui 0.80.x.
+2. **Raw TypeScript publishing** — the package ships `src/index.ts` directly with no `dist/` build step; upstream ships an esbuild-built `dist/` produced by a `prepack` build.
+3. **Host runtimes as optional peer dependencies** — `@earendil-works/pi-ai`, `@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`, and `typebox` are declared as optional `peerDependencies` (pinned to 0.80.5 in `devDependencies` for tests) instead of upstream's devDependencies-only 0.84.2 setup.
+4. **Tests live in the monorepo** — adapted to the root Vitest setup; upstream's dist-build tests are dropped and the shared test fixtures live in the repository root.
+
+Version numbering is independent of upstream: this package follows its own SemVer line (0.2.x) and does not mirror upstream's 0.5x versions. Upstream keeps evolving past the port baseline (0.53, 0.54, …); this package tracks upstream selectively rather than automatically.
+
 ## ⚙️ Configuration
 
 Settings are optional. When `~/.pi/agent/pi-goal.json` is absent, pi-goal uses these
