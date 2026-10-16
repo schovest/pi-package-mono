@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2
+
+Fix background (async) runs failing on pi ≥ 1.2.0 hosts with "does not provide @earendil-works/pi-agent-core/node, @earendil-works/chord, @earendil-works/chord/context".
+
+- Runner peer aliases are now split into required (import-graph-backed: `pi-coding-agent`, `pi-agent-core`, `pi-tui`, `pi-ai`(/compat), `typebox`(/compile)) and optional best-effort entries; only required-missing specifiers refuse the launch.
+- Optional aliases: `pi-agent-core/node` (removed in pi-agent-core 1.0.0), `pi-ai/oauth`, `pi-ai/providers/all`, `typebox/value`, and the chord pair (host dependency 0.85.0–1.1.x, dropped from pi 1.2.0 manifests). They are aliased when the host provides them and omitted otherwise.
+- The pre-0.85 chord version gate is replaced by the optional-alias semantics.
+
 ## 0.1.1
 
 Pipeline verification release: no code changes since 0.1.0. Published to validate the npm Trusted Publishing flow and the resilient CI publish step (`scripts/publish-packages.mjs`).

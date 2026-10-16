@@ -224,17 +224,19 @@ test("validateStructuredOutputValue validates values against a JSON Schema", asy
   assert.ok(invalid.status === "invalid" && invalid.message.length > 0);
 });
 
-test("chord is omitted before 0.85, but required host-first on chord-era and unknown hosts (#2026)", () => {
+test("optional host peer aliases are omitted when the host lacks them; required ones still refuse the launch (#2026)", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "pi-subagents-chord-alias-"));
   const host = path.join(root, "host");
   const extension = path.join(root, "extension");
   const chord = "@earendil-works/chord";
+  const core = "@earendil-works/pi-agent-core";
   function writePackage(dir: string, name: string, version: string, exports: Record<string, string>) {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ name, version, exports }));
     for (const target of Object.values(exports)) fs.writeFileSync(path.join(dir, target), "export {};\n");
   }
   const hostChord = path.join(host, "node_modules", chord);
+  const hostCore = path.join(host, "node_modules", core);
   try {
     const packages = new Map<string, Record<string, string>>();
     for (const { pkg, subpath } of HOST_PEER_ALIASES) {
@@ -246,37 +248,55 @@ test("chord is omitted before 0.85, but required host-first on chord-era and unk
       writePackage(
         pkg === "@earendil-works/pi-coding-agent" ? host : path.join(host, "node_modules", pkg),
         pkg,
-        "0.84.3",
+        "0.85.1",
         exports,
       );
     }
     const hostExports = packages.get("@earendil-works/pi-coding-agent")!;
-    const preChord = resolveHostPeerAliases(host);
-    assert.deepEqual(preChord.missing, []);
-    assert.equal(preChord.aliases[chord], undefined);
-    assert.equal(preChord.aliases[`${chord}/context`], undefined);
-    // An extension-local copy must never satisfy a missing host chord export.
+    const coreExports = packages.get(core)!;
+    const chordExports = packages.get(chord)!;
+    // A chord-era host resolves the optional chord and pi-agent-core/node aliases from the host tree.
+    let result = resolveHostPeerAliases(host);
+    assert.deepEqual(result.missing, []);
+    assert.equal(result.aliases[chord], fs.realpathSync(path.join(hostChord, chordExports["."]!)));
+    assert.equal(result.aliases[`${chord}/context`], fs.realpathSync(path.join(hostChord, chordExports["./context"]!)));
+    assert.equal(result.aliases[`${core}/node`], fs.realpathSync(path.join(hostCore, coreExports["./node"]!)));
+    // pi 1.2.0-style host: chord dropped from the manifest tree, pi-agent-core lost ./node.
+    // Both aliases are omitted, but the launch proceeds.
+    fs.rmSync(hostChord, { recursive: true, force: true });
+    writePackage(hostCore, core, "1.2.0", { ".": coreExports["."]! });
+    writePackage(host, "@earendil-works/pi-coding-agent", "1.2.0", hostExports);
+    result = resolveHostPeerAliases(host);
+    assert.deepEqual(result.missing, []);
+    for (const specifier of [chord, `${chord}/context`, `${core}/node`])
+      assert.equal(result.aliases[specifier], undefined, specifier);
+    assert.ok(result.aliases[core], "pi-agent-core root alias survives");
+    // Other host vintages without chord behave the same; an extension-local copy must never
+    // satisfy a missing host chord export.
     writePackage(path.join(extension, "node_modules", chord), chord, "0.85.1", {
       ".": "./index.mjs",
       "./context": "./context.mjs",
     });
-    for (const version of ["0.85.0", "0.85.1", "1.0.0", "0.84.4-test", "unknown"]) {
+    for (const version of ["0.85.0", "0.84.4-test", "unknown"]) {
       writePackage(host, "@earendil-works/pi-coding-agent", version, hostExports);
-      const result = resolveHostPeerAliases(host);
-      for (const specifier of [chord, `${chord}/context`]) assert.ok(result.missing.includes(specifier), version);
+      result = resolveHostPeerAliases(host);
+      assert.deepEqual(result.missing, [], version);
+      for (const specifier of [chord, `${chord}/context`]) assert.equal(result.aliases[specifier], undefined, version);
     }
+    // A chord-era host with a broken optional export omits just that alias.
     writePackage(host, "@earendil-works/pi-coding-agent", "0.85.1", hostExports);
     writePackage(hostChord, chord, "0.85.1", { ".": "./index.mjs", "./context": "./context.mjs" });
-    let result = resolveHostPeerAliases(host);
+    result = resolveHostPeerAliases(host);
     assert.deepEqual(result.missing, []);
     assert.equal(result.aliases[chord], fs.realpathSync(path.join(hostChord, "index.mjs")));
-    assert.equal(result.aliases[`${chord}/context`], fs.realpathSync(path.join(hostChord, "context.mjs")));
     fs.unlinkSync(path.join(hostChord, "context.mjs"));
-    assert.deepEqual(resolveHostPeerAliases(host).missing, [`${chord}/context`]);
-    writePackage(host, "@earendil-works/pi-coding-agent", "0.84.3", hostExports);
+    result = resolveHostPeerAliases(host);
+    assert.deepEqual(result.missing, []);
+    assert.equal(result.aliases[`${chord}/context`], undefined);
+    // Required aliases still gate the launch when the host cannot provide them.
     fs.rmSync(path.join(host, "node_modules", "@earendil-works/pi-tui"), { recursive: true });
     result = resolveHostPeerAliases(host);
-    assert.deepEqual(result.missing, ["@earendil-works/pi-tui"], "pre-chord hosts still require TUI");
+    assert.deepEqual(result.missing, ["@earendil-works/pi-tui"], "required aliases still gate the launch");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

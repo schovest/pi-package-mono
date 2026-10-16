@@ -1,6 +1,6 @@
 {
 	"name": "@schovest/pi-subagents",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Pi extension for single-agent delegation and scripted multi-agent workflows. Forked from nicobailon/pi-subagents v0.71.0.",
 	"type": "module",
 	"license": "MIT",
