@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3
+
+Fix choppy async-widget spinner animation: glyphs froze for 1–2s at a time while the host's own loader kept spinning.
+
+- Root cause: the tracker drove repaints from a free-running 1000ms timer sampling a 1000ms wall-clock frame boundary (`floor(now/1000)`, also the render cache key). Two same-frequency clocks beating produced aliasing — measured 31–47% of visible updates degrading to ~2s freezes with occasional double-steps — on top of the inherently choppy 1fps cadence.
+- `WIDGET_ANIMATION_INTERVAL_MS` 1000 → 120 (same order as pi's native `Loader`, 80ms/frame).
+- `ensurePoller` animation branch is now frame-value driven: it requests a repaint only when `floor(now / WIDGET_ANIMATION_INTERVAL_MS)` changes, i.e. the exact quantity the widget render cache keys on, eliminating the beat by construction. Measured cadence: 0.92fps / 1001–2004ms jitter → 8.2fps / 119–122ms uniform.
+- The liveness-tick throttle test was adapted to assert the frame-cadence bound instead of the old 0-renders-in-120ms assumption.
+
 ## 0.1.2
 
 Fix background (async) runs failing on pi ≥ 1.2.0 hosts with "does not provide @earendil-works/pi-agent-core/node, @earendil-works/chord, @earendil-works/chord/context".

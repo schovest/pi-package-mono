@@ -13,7 +13,12 @@ import { resolveSubagentRunId } from "../../src/runs/background/run-id-resolver.
 import { EXTERNAL_JOB_BRIDGE_REQUEST_DIR } from "../../src/runs/shared/external-job-bridge.ts";
 import { createNestedRoute, writeNestedEvent } from "../../src/runs/shared/nested-events.ts";
 import { getArtifactsDir } from "../../src/shared/artifacts.ts";
-import { type ControlEvent, SUBAGENT_CHILD_STATUS_EVENT, SUBAGENT_CONTROL_EVENT } from "../../src/shared/types.ts";
+import {
+  type ControlEvent,
+  SUBAGENT_CHILD_STATUS_EVENT,
+  SUBAGENT_CONTROL_EVENT,
+  WIDGET_ANIMATION_INTERVAL_MS,
+} from "../../src/shared/types.ts";
 import { SubagentFleetComponent } from "../../src/tui/fleet.ts";
 import { createTempDir, removeTempDir, tryImport } from "../support/helpers.ts";
 
@@ -1054,9 +1059,16 @@ describe("async job tracker", { skip: !available ? "pi packages not available" :
       await waitForCondition(() => state.asyncJobs.get("quiet-run")?.status === "running", "quiet running job refresh");
       await waitForCondition(() => ui.renderRequests > rendersAfterStart, "quiet running widget redraw");
       const renderRequests = ui.renderRequests;
-      await new Promise((resolve) => setTimeout(resolve, 120));
+      const windowMs = WIDGET_ANIMATION_INTERVAL_MS;
+      await new Promise((resolve) => setTimeout(resolve, windowMs));
 
-      assert.equal(ui.renderRequests, renderRequests);
+      // Animation repaints are throttled to the widget frame cadence, not the poller cadence:
+      // at most one render per animation frame (plus one for boundary straddling), never one per tick.
+      const allowedRenders = Math.ceil(windowMs / WIDGET_ANIMATION_INTERVAL_MS) + 1;
+      assert.ok(
+        ui.renderRequests - renderRequests <= allowedRenders,
+        `expected at most ${allowedRenders} animation renders in ${windowMs}ms, got ${ui.renderRequests - renderRequests}`,
+      );
       tracker.resetJobs();
     } finally {
       removeTempDir(asyncRoot);
