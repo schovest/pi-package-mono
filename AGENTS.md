@@ -66,6 +66,12 @@ LICENSE 保留 Nico Bailon 版权署名；上游 oxlint 配置与 `anti-slop-oxl
 4. `@schovest/pi-subagents` 为公开包（无 private，区别于上游 source-checkout 必须 private 的测试断言，
    相关测试已适配）；devDeps 嵌套 `@earendil-works/pi-*@0.87.1`（peer 要求 `pi-ai>=0.86.1`，
    与其余包的 0.80.5 并存，勿混升）；typebox 用 `^1.3.0`（peer optional + devDep）。
+5. 子 session loader 合并宿主 pi 内置扩展工厂（child-session.ts `loadHostBuiltinExtensions`：按文件 URL
+   深导入宿主包 `extensions/index.js` 的 `builtInExtensions`，运行时枚举、零清单维护；宿主无该模块则
+   静默降级，存在但加载失败则 console.warn 一次）。背景：pi CLI 入口会给每个 loader 前置合并内置工厂
+   （1.3.0 起 builtin:mcp/codemode/tool-search），子 loader 不合并时 settings enabled 的 `builtin:*`
+   在子 session 静默缺失。注入 `loadPiCodingAgent`（脚本化模块/二进制嵌入式 SDK）时跳过发现，可用
+   `loadBuiltinExtensions` 显式提供；回放时保留该行为与测试 child-session-builtin-extensions.test.ts。
 
 ### 代码风格
 

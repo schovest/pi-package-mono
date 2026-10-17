@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.4
+
+Fix child sessions silently missing pi's built-in extensions (`builtin:mcp`, `builtin:codemode`, `builtin:tool-search`, and later additions) even when settings enable them.
+
+- Root cause: pi's CLI entry prepends its built-in extension factories to every `DefaultResourceLoader` it builds; child loaders built here passed only the launch hooks, so the loader's `builtinExtensions` map stayed empty and settings-enabled `builtin:*` paths resolved to nothing. Ambient extensions were unaffected (loaded from disk, not the factory map).
+- `loadHostBuiltinExtensions()` reads the host package's `extensions/index.js` array at runtime (file-URL deep import, same root precedence as the host SDK load), so built-ins pi adds later need no change here. A host without that module degrades quietly; a module that exists but fails to load warns once.
+- Injected `loadPiCodingAgent` (scripted modules, the binary-embedded SDK) skips discovery; `loadBuiltinExtensions` opts in explicitly.
+- With built-ins present, settings-enabled `builtin:mcp` resolves in background children and `extensions: ["builtin:mcp"]` works as an explicit escape hatch, matching `pi -e builtin:mcp`.
+
 ## 0.1.3
 
 Fix choppy async-widget spinner animation: glyphs froze for 1–2s at a time while the host's own loader kept spinning.
