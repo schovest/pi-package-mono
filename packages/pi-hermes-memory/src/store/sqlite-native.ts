@@ -3,8 +3,17 @@
  *
  * Pi installs extension deps under ~/.pi/agent/npm. When the host Node that
  * runs Pi (e.g. Homebrew) differs from the Node that compiled better-sqlite3,
- * require() throws NODE_MODULE_VERSION errors. Detect that, attempt one
+ * the native dlopen throws NODE_MODULE_VERSION errors. Detect that, attempt one
  * npm rebuild against the current runtime, and surface a clear recovery path.
+ *
+ * better-sqlite3 >= 12 resolves its addon lazily inside lib/database.js on the
+ * first Database construction, so a plain require("better-sqlite3") never
+ * dlopens. loadBetterSqlite3 therefore probes the addon eagerly (see
+ * probeBetterSqlite3NativeAddon): without it, load failures would surface at
+ * first use — outside this recovery path — and every later attempt in the same
+ * process would fail with the misleading "Module did not self-register" (the
+ * failed dlopen stays registered with Node and cached by the dynamic linker
+ * until the process exits).
  */
 
 import { spawnSync } from "node:child_process";
@@ -41,7 +50,8 @@ export class BetterSqlite3LoadError extends Error {
   }
 }
 
-const ABI_MISMATCH_RE = /NODE_MODULE_VERSION|was compiled against a different Node\.js version|ERR_DLOPEN_FAILED/i;
+const ABI_MISMATCH_RE =
+  /NODE_MODULE_VERSION|was compiled against a different Node\.js version|did not self-register|ERR_DLOPEN_FAILED/i;
 
 /**
  * True when running under Bun (including the compiled Pi binary).
@@ -177,6 +187,48 @@ export function formatBetterSqlite3AbiError(options: {
 }
 
 /**
+ * Probe better-sqlite3's native addon so the real dlopen runs inside this
+ * loader's try/catch instead of lazily at first Database construction.
+ *
+ * Requiring the addon file directly shares Node's module cache with the later
+ * `require('bindings')('better_sqlite3.node')` inside lib/database.js (same
+ * resolved path), so this is purely an eager load — no double dlopen.
+ *
+ * When no addon exists in the standard build layouts (unusual installs, test
+ * fakes), probing is skipped and loading behaves exactly as before.
+ */
+function probeBetterSqlite3NativeAddon(requireImpl: NodeRequire): void {
+  const packageDir = resolveBetterSqlite3PackageRoot(requireImpl);
+  if (!packageDir) return;
+  for (const candidate of [
+    ["build", "Release", "better_sqlite3.node"],
+    ["build", "Debug", "better_sqlite3.node"],
+  ]) {
+    const addonPath = path.join(packageDir, ...candidate);
+    if (!fs.existsSync(addonPath)) continue;
+    requireImpl(addonPath);
+    return;
+  }
+}
+
+/**
+ * Package roots whose rebuild already ran and still failed to make the module
+ * loadable in this process. Native addons cannot be unloaded, so the first
+ * failed dlopen keeps its stale registration (and the dynamic linker keeps the
+ * mapped file) until the process exits — retrying would only re-run npm
+ * rebuild for nothing. Restarting Pi picks up the repaired module.
+ */
+const terminalRebuildFailures = new Set<string>();
+
+/**
+ * Test hook: clears the process-level terminal rebuild-failure memory so each
+ * test starts from a clean loader state.
+ */
+export function resetBetterSqlite3LoadState(): void {
+  terminalRebuildFailures.clear();
+}
+
+/**
  * Load better-sqlite3, attempting one rebuild on ABI/dlopen mismatch.
  */
 export function loadBetterSqlite3(options: SqliteNativeLoadOptions = {}): BetterSqlite3DatabaseCtor {
@@ -184,6 +236,7 @@ export function loadBetterSqlite3(options: SqliteNativeLoadOptions = {}): Better
 
   const loadOnce = (): BetterSqlite3DatabaseCtor => {
     const mod = requireImpl("better-sqlite3") as { default?: BetterSqlite3DatabaseCtor } | BetterSqlite3DatabaseCtor;
+    probeBetterSqlite3NativeAddon(requireImpl);
     return unwrapModule(mod);
   };
 
@@ -206,6 +259,19 @@ export function loadBetterSqlite3(options: SqliteNativeLoadOptions = {}): Better
       throw firstError;
     }
 
+    if (terminalRebuildFailures.has(packageRoot)) {
+      throw new BetterSqlite3LoadError(
+        formatBetterSqlite3AbiError({
+          originalError: firstError,
+          packageRoot,
+          rebuildAttempted: true,
+          rebuildDetail:
+            "an earlier automatic rebuild already ran in this process; restart Pi to load the repaired module",
+        }),
+        { packageRoot, cause: firstError },
+      );
+    }
+
     const rebuild = options.rebuild ?? defaultRebuild;
     const rebuildResult = rebuild(packageRoot);
     clearBetterSqlite3RequireCache(requireImpl, packageRoot);
@@ -214,6 +280,7 @@ export function loadBetterSqlite3(options: SqliteNativeLoadOptions = {}): Better
       try {
         return loadOnce();
       } catch (secondError) {
+        terminalRebuildFailures.add(packageRoot);
         throw new BetterSqlite3LoadError(
           formatBetterSqlite3AbiError({
             originalError: secondError,
@@ -226,6 +293,7 @@ export function loadBetterSqlite3(options: SqliteNativeLoadOptions = {}): Better
       }
     }
 
+    terminalRebuildFailures.add(packageRoot);
     throw new BetterSqlite3LoadError(
       formatBetterSqlite3AbiError({
         originalError: firstError,
