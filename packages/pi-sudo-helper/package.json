@@ -1,6 +1,6 @@
 {
 	"name": "@schovest/pi-sudo-helper",
-	"version": "0.1.8",
+	"version": "0.2.0",
 	"description": "Sudo password helper extension for Pi coding agent",
 	"type": "module",
 	"types": "./index.ts",
@@ -25,7 +25,9 @@
 	},
 	"files": [
 		"index.ts",
-		"bash-scan.ts"
+		"bash-scan.ts",
+		"README.md",
+		"LICENSE"
 	],
 	"devDependencies": {
 		"@earendil-works/pi-coding-agent": "0.80.5",
