@@ -1,7 +1,7 @@
 # 移植 Masterisk-F/pi-compact-display（master b3f6db1）→ @schovest/pi-compact-display
 
 日期：2026-10-28
-状态：待批准（builder check 两项定夺已并入：biome 重排口径、测试类型就地修）
+状态：已批准（2026-10-28；含 builder check 两项定夺与实施期 noUselessElse Ruling）
 
 ## 背景
 

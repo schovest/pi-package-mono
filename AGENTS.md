@@ -11,7 +11,7 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 - 发布原始 `.ts` 源码，不做构建
 - 每个包独立维护版本号（见「版本管理」）
 
-当前包（12 个）：
+当前包（13 个）：
 
 | 包 | 说明 | 发布 |
 | --- | --- | --- |
@@ -25,6 +25,7 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 | `pi-mcp-adapter` | MCP 适配器 | ✅ |
 | `pi-sudo-helper` | sudo 密码注入 | ✅ |
 | `pi-tps` | tokens-per-second 监控 | ✅ |
+| `pi-compact-display` | 按工具定制 TUI 工具输出渲染（摘要行/限行/grouping/hideThinking，renderer-only） | ✅ |
 | `pi-subagents` | 子 agent 委托 + 脚本化多 agent 工作流（fork 自 nicobailon/pi-subagents） | ✅ |
 | `pi-hermes-memory` | 🧠 持久记忆 + 会话搜索 + 学习循环（SQLite FTS5） | ✅（未首发） |
 
@@ -42,6 +43,16 @@ LICENSE 保留上游 Chandra Teja 版权署名；上游未发布修复 #189（ch
 `pi-goal`（目录 `packages/pi-goal`）迁移自 [narumiruna/pi-extensions](https://github.com/narumiruna/pi-extensions) `packages/pi-goal` v0.52.2（npm tarball 与 tag 源一致）。
 **移植约定**：相对导入保留 `.js` 后缀；src 全量搬运，旧弱实现（单文件 index.ts）已删除；`scripts/build-runtime.mjs`、`dist/` 产物与 3 个 dist 构建测试（build-runtime/generated-entry/goal-runtime-smoke）不适用已裁掉；`test/support.ts`（createMockPi/createMockContext）放在仓根 `test/`，上游 `../../../test/support.js` 相对导入保持不变；persistence 子进程测试已改为 `--import tsx` + 源码路径（上游用 node_modules/.cache 构建产物）。
 **降级兼容（关键）**：上游依赖 pi-tui 0.84+ 的 `stripTerminalSequences`（0.80.5 缺失 → goal_complete 报 `is not a function`）；`src/terminal-compat.ts` 用命名空间导入 + 探测（`??` 回退本地等价实现，逻辑与上游 extractAnsiCode/stripTerminalSequences 一致），errors.ts 改从该模块导入。升级上游后若 pi-tui 已导出该函数，命中断言：本包 devDeps 固定在 0.80.5，勿随上游升到 0.84（除非同时加兼容层）。
+
+`pi-compact-display`（目录 `packages/pi-compact-display`）迁移自 [Masterisk-F/pi-compact-display](https://github.com/Masterisk-F/pi-compact-display)
+master b3f6db1（领先已发布 v1.5.0 一个未发布修复 PR #9 renderer-only 兼容；npm 包只发 dist，不可作基线）。
+**移植约定**：`LICENSE` 实为 **GPL-3.0**（npm 元数据误标 ISC），package.json 用 `GPL-3.0-only`，GPLv3 全文与
+Masterisk-F 署名原样保留；相对导入补 `.ts` 后缀（root NodeNext 必需）；上游 vitest.config 的
+`COLORTERM=truecolor` 移入 `tests/renderingHarness.ts`；接受 biome 全量重排，逻辑保真以 `git diff -w`
+对照上游验收（另有 biome `noUselessElse` 一处手工扁平化，语义等价）；上游 tsconfig 只含 `src`、测试从未被
+tsc 检查，类型债已就地修（hermes 先例，全部类型层）。**依赖**：包 devDeps 嵌套
+`@earendil-works/pi-{coding-agent,tui}@1.4.0`（精确；本包需 ≥1.0.1 的 `registerToolRenderer`，
+与 root 0.80.5、pi-subagents 嵌套 0.87.1 三线并存，勿混升）；`@types/node ^26` 嵌套（root 22.20.1 不动）。
 
 `pi-subagents`（目录 `packages/pi-subagents`）迁移自 [nicobailon/pi-subagents](https://github.com/nicobailon/pi-subagents)
 tag v0.71.0（GitHub tarball，非 main HEAD）。
