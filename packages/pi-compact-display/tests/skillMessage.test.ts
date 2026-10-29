@@ -7,7 +7,7 @@ import extension from '../src/index.ts';
 vi.mock('fs');
 
 describe('SkillInvocationMessageComponent & Spacer Override', () => {
-  const originalUpdateDisplay = SkillInvocationMessageComponent.prototype.updateDisplay;
+  const originalUpdateDisplay = (SkillInvocationMessageComponent.prototype as any).updateDisplay;
   const containerProto = Object.getPrototypeOf(UserMessageComponent.prototype) || Container.prototype;
   const originalAddChild = containerProto.addChild;
   const originalAddChildTui = Container.prototype.addChild;
@@ -26,7 +26,7 @@ describe('SkillInvocationMessageComponent & Spacer Override', () => {
 
   afterEach(() => {
     // プロトタイプパッチを元に戻す (テスト間のリーク防止)
-    SkillInvocationMessageComponent.prototype.updateDisplay = originalUpdateDisplay;
+    (SkillInvocationMessageComponent.prototype as any).updateDisplay = originalUpdateDisplay;
     containerProto.addChild = originalAddChild;
     Container.prototype.addChild = originalAddChildTui;
   });
@@ -72,15 +72,15 @@ describe('SkillInvocationMessageComponent & Spacer Override', () => {
 
     // Simulate adding spacer before skill component
     chatContainer.addChild(spacerBefore);
-    expect(spacerBefore.lines).toBe(1); // not silenced yet since skill is not added yet
+    expect((spacerBefore as any).lines).toBe(1); // not silenced yet since skill is not added yet
 
     // Simulate adding skill component
     chatContainer.addChild(skillComp);
-    expect(spacerBefore.lines).toBe(0); // silenced now!
+    expect((spacerBefore as any).lines).toBe(0); // silenced now!
 
     // Simulate adding spacer after skill component
     chatContainer.addChild(spacerAfter);
-    expect(spacerAfter.lines).toBe(0); // silenced immediately because last component was skill!
+    expect((spacerAfter as any).lines).toBe(0); // silenced immediately because last component was skill!
   });
 
   it('should silence Spacer between skill and user when both noPadding are true', () => {
@@ -97,7 +97,7 @@ describe('SkillInvocationMessageComponent & Spacer Override', () => {
     chatContainer.addChild(userPrompt);
 
     // The Spacer between skill and user message is silenced
-    expect(spacerBetween.lines).toBe(0);
+    expect((spacerBetween as any).lines).toBe(0);
   });
 
   it('should silence the Spacer inside AssistantMessageComponent when following skill invocation', () => {
@@ -115,13 +115,13 @@ describe('SkillInvocationMessageComponent & Spacer Override', () => {
       content: [
         { type: 'text', text: 'Hello!' }
       ]
-    });
+    } as any);
 
     chatContainer.addChild(assistantMessage);
 
     // assistantMessage.contentContainer 内の Spacer が抑制されていることを確認
     const innerSpacer = (assistantMessage as any).contentContainer.children.find((c: any) => c && c.constructor && c.constructor.name === "Spacer") as Spacer | undefined;
     expect(innerSpacer).toBeDefined();
-    expect(innerSpacer?.lines).toBe(0); // silenced!
+    expect((innerSpacer as any)?.lines).toBe(0); // silenced!
   });
 });

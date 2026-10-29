@@ -7,7 +7,7 @@ import extension from '../src/index.ts';
 vi.mock('fs');
 
 describe('UserMessageComponent & Spacer Override', () => {
-  const originalRebuild = UserMessageComponent.prototype.rebuild;
+  const originalRebuild = (UserMessageComponent.prototype as any).rebuild;
   const containerProto = Object.getPrototypeOf(AssistantMessageComponent.prototype) || Container.prototype;
   const originalAddChild = containerProto.addChild;
   const originalAddChildTui = Container.prototype.addChild;
@@ -17,7 +17,7 @@ describe('UserMessageComponent & Spacer Override', () => {
   });
 
   afterEach(() => {
-    UserMessageComponent.prototype.rebuild = originalRebuild;
+    (UserMessageComponent.prototype as any).rebuild = originalRebuild;
     containerProto.addChild = originalAddChild;
     Container.prototype.addChild = originalAddChildTui;
   });
@@ -89,15 +89,15 @@ describe('UserMessageComponent & Spacer Override', () => {
 
     // Simulate adding spacer before prompt
     chatContainer.addChild(spacerBefore);
-    expect(spacerBefore.lines).toBe(1); // not silenced yet since user prompt is not added yet
+    expect((spacerBefore as any).lines).toBe(1); // not silenced yet since user prompt is not added yet
 
     // Simulate adding user prompt
     chatContainer.addChild(userPrompt);
-    expect(spacerBefore.lines).toBe(0); // silenced now!
+    expect((spacerBefore as any).lines).toBe(0); // silenced now!
 
     // Simulate adding spacer after prompt
     chatContainer.addChild(spacerAfter);
-    expect(spacerAfter.lines).toBe(0); // silenced immediately because last component was user prompt!
+    expect((spacerAfter as any).lines).toBe(0); // silenced immediately because last component was user prompt!
   });
 
   it('should silence the Spacer inside AssistantMessageComponent when following user prompt', () => {
@@ -122,14 +122,14 @@ describe('UserMessageComponent & Spacer Override', () => {
       content: [
         { type: 'text', text: 'Hello!' }
       ]
-    });
+    } as any);
 
     chatContainer.addChild(assistantMessage);
 
     // Let's verify that the Spacer inside assistantMessage.contentContainer is silenced
     const innerSpacer = (assistantMessage as any).contentContainer.children.find((c: any) => c && c.constructor && c.constructor.name === "Spacer") as Spacer | undefined;
     expect(innerSpacer).toBeDefined();
-    expect(innerSpacer?.lines).toBe(0); // silenced!
+    expect((innerSpacer as any)?.lines).toBe(0); // silenced!
   });
 
   it('should not silence Spacers when user.noPadding is false', () => {
@@ -152,7 +152,7 @@ describe('UserMessageComponent & Spacer Override', () => {
     chatContainer.addChild(userPrompt);
     chatContainer.addChild(spacerAfter);
 
-    expect(spacerBefore.lines).toBe(1);
-    expect(spacerAfter.lines).toBe(1);
+    expect((spacerBefore as any).lines).toBe(1);
+    expect((spacerAfter as any).lines).toBe(1);
   });
 });

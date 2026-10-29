@@ -23,7 +23,8 @@ describe('hideThinking — updateContent patch', () => {
     extension(mockPi as any);
   };
 
-  const makeMessage = (content: any[]) => ({
+  // 移植适配：partial 消息字面量仅用于组件渲染路径，放宽返回类型以过 strict tsc（类型层修正，运行时不变）。
+  const makeMessage = (content: any[]): any => ({
     role: 'assistant',
     content,
     stopReason: 'stop',
