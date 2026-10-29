@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import fs from 'fs';
-import { UserMessageComponent, AssistantMessageComponent } from "@earendil-works/pi-coding-agent";
+import fs from "fs";
+import { AssistantMessageComponent, UserMessageComponent } from "@earendil-works/pi-coding-agent";
 import { Container, Spacer } from "@earendil-works/pi-tui";
-import extension from '../src/index.ts';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import extension from "../src/index.ts";
 
-vi.mock('fs');
+vi.mock("fs");
 
-describe('UserMessageComponent & Spacer Override', () => {
+describe("UserMessageComponent & Spacer Override", () => {
   const originalRebuild = (UserMessageComponent.prototype as any).rebuild;
   const containerProto = Object.getPrototypeOf(AssistantMessageComponent.prototype) || Container.prototype;
   const originalAddChild = containerProto.addChild;
@@ -22,16 +22,18 @@ describe('UserMessageComponent & Spacer Override', () => {
     Container.prototype.addChild = originalAddChildTui;
   });
 
-  it('should remove vertical padding when noPadding is true', () => {
+  it("should remove vertical padding when noPadding is true", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
-      user: { noPadding: true }
-    }));
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        user: { noPadding: true },
+      }),
+    );
 
     // Load the extension to apply the hook
     const mockPi = {
       on: vi.fn(),
-      registerToolRenderer: vi.fn()
+      registerToolRenderer: vi.fn(),
     };
     extension(mockPi as any);
 
@@ -48,14 +50,14 @@ describe('UserMessageComponent & Spacer Override', () => {
     expect(box.paddingX).toBe(1);
   });
 
-  it('should keep default vertical padding when noPadding is not specified', () => {
+  it("should keep default vertical padding when noPadding is not specified", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({}));
 
     // Load the extension to apply the hook
     const mockPi = {
       on: vi.fn(),
-      registerToolRenderer: vi.fn()
+      registerToolRenderer: vi.fn(),
     };
     extension(mockPi as any);
 
@@ -69,15 +71,17 @@ describe('UserMessageComponent & Spacer Override', () => {
     expect(box.paddingX).toBe(1);
   });
 
-  it('should silence adjacent Spacers when user.noPadding is true', () => {
+  it("should silence adjacent Spacers when user.noPadding is true", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
-      user: { noPadding: true }
-    }));
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        user: { noPadding: true },
+      }),
+    );
 
     const mockPi = {
       on: vi.fn(),
-      registerToolRenderer: vi.fn()
+      registerToolRenderer: vi.fn(),
     };
     extension(mockPi as any);
 
@@ -100,15 +104,17 @@ describe('UserMessageComponent & Spacer Override', () => {
     expect((spacerAfter as any).lines).toBe(0); // silenced immediately because last component was user prompt!
   });
 
-  it('should silence the Spacer inside AssistantMessageComponent when following user prompt', () => {
+  it("should silence the Spacer inside AssistantMessageComponent when following user prompt", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
-      user: { noPadding: true }
-    }));
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        user: { noPadding: true },
+      }),
+    );
 
     const mockPi = {
       on: vi.fn(),
-      registerToolRenderer: vi.fn()
+      registerToolRenderer: vi.fn(),
     };
     extension(mockPi as any);
 
@@ -118,27 +124,27 @@ describe('UserMessageComponent & Spacer Override', () => {
 
     // Instantiate AssistantMessageComponent
     const assistantMessage = new AssistantMessageComponent({
-      role: 'assistant',
-      content: [
-        { type: 'text', text: 'Hello!' }
-      ]
+      role: "assistant",
+      content: [{ type: "text", text: "Hello!" }],
     } as any);
 
     chatContainer.addChild(assistantMessage);
 
     // Let's verify that the Spacer inside assistantMessage.contentContainer is silenced
-    const innerSpacer = (assistantMessage as any).contentContainer.children.find((c: any) => c && c.constructor && c.constructor.name === "Spacer") as Spacer | undefined;
+    const innerSpacer = (assistantMessage as any).contentContainer.children.find(
+      (c: any) => c && c.constructor && c.constructor.name === "Spacer",
+    ) as Spacer | undefined;
     expect(innerSpacer).toBeDefined();
     expect((innerSpacer as any)?.lines).toBe(0); // silenced!
   });
 
-  it('should not silence Spacers when user.noPadding is false', () => {
+  it("should not silence Spacers when user.noPadding is false", () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({}));
 
     const mockPi = {
       on: vi.fn(),
-      registerToolRenderer: vi.fn()
+      registerToolRenderer: vi.fn(),
     };
     extension(mockPi as any);
 

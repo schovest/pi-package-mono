@@ -1,21 +1,26 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import fs from 'fs';
-import { UserMessageComponent, AssistantMessageComponent, SkillInvocationMessageComponent, initTheme } from "@earendil-works/pi-coding-agent";
+import fs from "fs";
+import {
+  AssistantMessageComponent,
+  SkillInvocationMessageComponent,
+  UserMessageComponent,
+  initTheme,
+} from "@earendil-works/pi-coding-agent";
 import { Container, Spacer } from "@earendil-works/pi-tui";
-import extension from '../src/index.ts';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import extension from "../src/index.ts";
 
-vi.mock('fs');
+vi.mock("fs");
 
-describe('SkillInvocationMessageComponent & Spacer Override', () => {
+describe("SkillInvocationMessageComponent & Spacer Override", () => {
   const originalUpdateDisplay = (SkillInvocationMessageComponent.prototype as any).updateDisplay;
   const containerProto = Object.getPrototypeOf(UserMessageComponent.prototype) || Container.prototype;
   const originalAddChild = containerProto.addChild;
   const originalAddChildTui = Container.prototype.addChild;
 
   const skillBlock = {
-    name: 'test-skill',
-    location: '/test',
-    content: 'test content',
+    name: "test-skill",
+    location: "/test",
+    content: "test content",
     userMessage: undefined,
   };
 
@@ -36,12 +41,12 @@ describe('SkillInvocationMessageComponent & Spacer Override', () => {
     vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(configJson));
     const mockPi = {
       on: vi.fn(),
-      registerToolRenderer: vi.fn()
+      registerToolRenderer: vi.fn(),
     };
     extension(mockPi as any);
   };
 
-  it('should remove vertical padding when skill.noPadding is true', () => {
+  it("should remove vertical padding when skill.noPadding is true", () => {
     loadExtension({ skill: { noPadding: true } });
 
     const component = new SkillInvocationMessageComponent(skillBlock);
@@ -52,7 +57,7 @@ describe('SkillInvocationMessageComponent & Spacer Override', () => {
     expect((component as any).paddingX).toBe(1);
   });
 
-  it('should keep default vertical padding when skill.noPadding is not specified', () => {
+  it("should keep default vertical padding when skill.noPadding is not specified", () => {
     loadExtension({});
 
     const component = new SkillInvocationMessageComponent(skillBlock);
@@ -61,7 +66,7 @@ describe('SkillInvocationMessageComponent & Spacer Override', () => {
     expect((component as any).paddingY).toBe(1);
   });
 
-  it('should silence adjacent Spacers when skill.noPadding is true', () => {
+  it("should silence adjacent Spacers when skill.noPadding is true", () => {
     loadExtension({ skill: { noPadding: true } });
 
     const chatContainer = new Container();
@@ -83,7 +88,7 @@ describe('SkillInvocationMessageComponent & Spacer Override', () => {
     expect((spacerAfter as any).lines).toBe(0); // silenced immediately because last component was skill!
   });
 
-  it('should silence Spacer between skill and user when both noPadding are true', () => {
+  it("should silence Spacer between skill and user when both noPadding are true", () => {
     loadExtension({ user: { noPadding: true }, skill: { noPadding: true } });
 
     const chatContainer = new Container();
@@ -100,7 +105,7 @@ describe('SkillInvocationMessageComponent & Spacer Override', () => {
     expect((spacerBetween as any).lines).toBe(0);
   });
 
-  it('should silence the Spacer inside AssistantMessageComponent when following skill invocation', () => {
+  it("should silence the Spacer inside AssistantMessageComponent when following skill invocation", () => {
     loadExtension({ skill: { noPadding: true } });
 
     const chatContainer = new Container();
@@ -111,16 +116,16 @@ describe('SkillInvocationMessageComponent & Spacer Override', () => {
     // この時点では chatContainer.addChild(assistant) がまだ実行されておらず、共有状態
     // lastSignificantComponentType が "skill" のままなので、内部 Spacer が抑制される。
     const assistantMessage = new AssistantMessageComponent({
-      role: 'assistant',
-      content: [
-        { type: 'text', text: 'Hello!' }
-      ]
+      role: "assistant",
+      content: [{ type: "text", text: "Hello!" }],
     } as any);
 
     chatContainer.addChild(assistantMessage);
 
     // assistantMessage.contentContainer 内の Spacer が抑制されていることを確認
-    const innerSpacer = (assistantMessage as any).contentContainer.children.find((c: any) => c && c.constructor && c.constructor.name === "Spacer") as Spacer | undefined;
+    const innerSpacer = (assistantMessage as any).contentContainer.children.find(
+      (c: any) => c && c.constructor && c.constructor.name === "Spacer",
+    ) as Spacer | undefined;
     expect(innerSpacer).toBeDefined();
     expect((innerSpacer as any)?.lines).toBe(0); // silenced!
   });

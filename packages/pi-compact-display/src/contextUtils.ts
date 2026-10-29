@@ -12,7 +12,7 @@ function firstLine(text: string, strip = false): string {
 }
 
 export function cleanContextMessages(messages: any[]): any[] {
-  return messages.map(m => {
+  return messages.map((m) => {
     if (m.role === "assistant" && Array.isArray(m.content)) {
       return {
         ...m,
@@ -24,9 +24,9 @@ export function cleanContextMessages(messages: any[]): any[] {
               const newlineIndex = b.text.indexOf("\n");
               if (newlineIndex !== -1) {
                 return { ...b, text: b.text.substring(newlineIndex + 1) };
-              } else {
-                return { ...b, text: "" };
               }
+              // 移植适配：原为 else 分支，biome noUselessElse（return 后等价扁平化，运行时语义不变）。
+              return { ...b, text: "" };
             }
           }
           return b;
