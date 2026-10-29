@@ -1,3 +1,6 @@
+// 移植适配：本文件不引 renderingHarness，vitest 4 逐文件隔离下需自行声明 truecolor（上游由 vitest.config env 提供）。
+process.env.COLORTERM ??= "truecolor";
+
 import { initTheme, renderDiff } from "@earendil-works/pi-coding-agent";
 import { beforeEach, describe, expect, it } from "vitest";
 import { colorizeResult } from "../src/renderUtils.ts";
