@@ -55,7 +55,7 @@ test("executeAsyncSingle preloads all peer aliases before the selected runner lo
       throw new Error("spawn boundary captured");
     });
     nodeModule.syncBuiltinESMExports();
-    for (const scenario of ["stable", "pre-chord", "missing-pre-chord"]) {
+    for (const scenario of ["stable", "pre-chord", "missing-optional", "missing-required"]) {
       if (scenario === "pre-chord") {
         fs.writeFileSync(
           path.join(host, "package.json"),
@@ -69,7 +69,13 @@ test("executeAsyncSingle preloads all peer aliases before the selected runner lo
         for (const specifier of ["@earendil-works/chord", "@earendil-works/chord/context"])
           delete expectedAliases[specifier];
       }
-      if (scenario === "missing-pre-chord") fs.unlinkSync(expectedAliases["@earendil-works/pi-agent-core/node"]!);
+      // Optional aliases degrade to omission instead of refusing the launch.
+      if (scenario === "missing-optional") {
+        fs.unlinkSync(expectedAliases["@earendil-works/pi-agent-core/node"]!);
+        delete expectedAliases["@earendil-works/pi-agent-core/node"];
+      }
+      // Required aliases still gate the launch when the host cannot provide them.
+      if (scenario === "missing-required") fs.unlinkSync(expectedAliases["typebox/compile"]!);
       const configuredExtension = scenario === "pre-chord" ? fileURLToPath(import.meta.url) : undefined;
       const result = executeAsyncSingle(`spawn-preload-${scenario}`, {
         agent: "worker",
@@ -90,13 +96,13 @@ test("executeAsyncSingle preloads all peer aliases before the selected runner lo
         acceptance: false,
       });
       assert.equal(result.isError, true);
-      if (scenario === "missing-pre-chord") {
-        assert.match(result.content[0]!.text, /@earendil-works\/pi-agent-core\/node/);
-        assert.equal(spawn.mock.calls.length, 2);
+      if (scenario === "missing-required") {
+        assert.match(result.content[0]!.text, /typebox\/compile/);
+        assert.equal(spawn.mock.calls.length, 3);
         continue;
       }
       assert.match(result.content[0]!.text, /spawn boundary captured/);
-      assert.equal(spawn.mock.calls.length, scenario === "stable" ? 1 : 2);
+      assert.equal(spawn.mock.calls.length, scenario === "stable" ? 1 : scenario === "pre-chord" ? 2 : 3);
       const [command, args, options] = spawn.mock.calls.at(-1)!;
       assert.ok(path.isAbsolute(command));
       assert.equal(options.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV], host);

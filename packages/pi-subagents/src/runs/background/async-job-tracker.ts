@@ -118,7 +118,7 @@ export function createAsyncJobTracker(
   };
   let rootWatcher: fs.FSWatcher | undefined;
   let nextLivenessAt = Date.now() + livenessIntervalMs;
-  let nextWidgetAnimationAt = Date.now() + WIDGET_ANIMATION_INTERVAL_MS;
+  let lastAnimationFrame = Math.floor(Date.now() / WIDGET_ANIMATION_INTERVAL_MS);
   const watch = options.watch ?? fs.watch;
   const useNativeWatcher = () => shouldUseNativeFsWatch("async-job-tracker", options.platform);
   const withLastUiContext = <T>(run: (ctx: ExtensionContext) => T): T | undefined => {
@@ -784,9 +784,12 @@ export function createAsyncJobTracker(
           }
           if (widgetChanged) rerenderLastWidget();
         }
-        if (runningJobIds.size > 0 && now >= nextWidgetAnimationAt) {
-          nextWidgetAnimationAt = now + WIDGET_ANIMATION_INTERVAL_MS;
-          requestLastWidgetRender();
+        if (runningJobIds.size > 0) {
+          const animationFrame = Math.floor(now / WIDGET_ANIMATION_INTERVAL_MS);
+          if (animationFrame !== lastAnimationFrame) {
+            lastAnimationFrame = animationFrame;
+            requestLastWidgetRender();
+          }
         }
       },
       Math.min(WIDGET_ANIMATION_INTERVAL_MS, livenessIntervalMs),

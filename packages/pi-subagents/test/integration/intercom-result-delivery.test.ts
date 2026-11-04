@@ -1594,9 +1594,16 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       assert.equal(handoff.groups?.[0]?.children?.[0]?.patch?.changed, true);
       assert.equal(handoff.groups?.[0]?.children?.[0]?.patch?.filesChanged, 1);
     } finally {
-      fs.rmSync(asyncDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      // revived runner 在 status complete 后仍可能短暂收尾写盘；5×20ms 的重试窗不够，
+      // rmSync 遍历-删除间隙撞 ENOTEMPTY 会把已通过的用例误报为失败。放宽到 ~5s 线性退避。
+      fs.rmSync(asyncDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 25 });
       if (revivedId)
-        fs.rmSync(path.join(ASYNC_DIR, revivedId), { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+        fs.rmSync(path.join(ASYNC_DIR, revivedId), {
+          recursive: true,
+          force: true,
+          maxRetries: 20,
+          retryDelay: 25,
+        });
       if (revivedId) fs.rmSync(path.join(RESULTS_DIR, `${revivedId}.json`), { force: true });
       fs.rmSync(sessionFile, { force: true });
     }

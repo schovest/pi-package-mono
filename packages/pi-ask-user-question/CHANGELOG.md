@@ -5,6 +5,16 @@ All notable changes to `@schovest/pi-ask-user-question` are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.2.1] - 2026-10-08
+
+### Changed
+
+- Move `typebox` from `dependencies` to `peerDependencies` (`"*"`, optional): newer pi hosts require
+  host-provided packages to be peers, otherwise the extension loader warns about duplicate runtime
+  modules.
+
 ## [0.2.0] - 2026-08-06
 
 ### Added

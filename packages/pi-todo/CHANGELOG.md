@@ -7,6 +7,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-08
+
+### Changed
+
+- Move `typebox` from `dependencies` to `peerDependencies` (`"*"`, optional): newer pi hosts require
+  host-provided packages to be peers, otherwise the extension loader warns about duplicate runtime
+  modules.
+
 ## [2.4.0] - 2026-08-03
 
 ## [2.3.1] - 2026-07-31

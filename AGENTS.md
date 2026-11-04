@@ -11,20 +11,21 @@ Pi 扩展单仓的行为准则。与通用指南叠加使用。
 - 发布原始 `.ts` 源码，不做构建
 - 每个包独立维护版本号（见「版本管理」）
 
-当前包（12 个）：
+当前包（13 个）：
 
 | 包 | 说明 | 发布 |
 | --- | --- | --- |
 | `pi-btw` | `/btw` 侧问命令（底部面板，答案不落盘） | ✅ |
 | `pi-todo` | `todo` 工具 + `/todos` 命令 + 实时覆盖层（存活 compaction） | ✅ |
 | `pi-ask-user-question` | `ask_user_question` 分页签对话框工具 | ✅ |
-| `pi-config` | 共享配置 I/O（configPath/loadJsonConfig 等） | ✅ |
-| `pi-i18n` | 本地化基础（locale 检测、/loader 子路径、软可选） | ✅ |
+| `pi-config` | 共享配置 I/O（configPath/loadJsonConfig 等） | ❌（2026-10-08 起止版，private） |
+| `pi-i18n` | 本地化基础（locale 检测、/loader 子路径、软可选） | ❌（2026-10-08 起止版，private） |
 | `pi-test-utils` | 测试夹具（verifyShipManifest、mock Pi 等） | ❌ private |
 | `pi-goal` | goal 自主编排扩展（迁移自 narumitw/pi-goal，含 pi-tui 降级兼容） | ✅ |
 | `pi-mcp-adapter` | MCP 适配器 | ✅ |
 | `pi-sudo-helper` | sudo 密码注入 | ✅ |
 | `pi-tps` | tokens-per-second 监控 | ✅ |
+| `pi-compact-display` | 按工具定制 TUI 工具输出渲染（摘要行/限行/grouping/hideThinking，renderer-only） | ✅ |
 | `pi-subagents` | 子 agent 委托 + 脚本化多 agent 工作流（fork 自 nicobailon/pi-subagents） | ✅ |
 | `pi-hermes-memory` | 🧠 持久记忆 + 会话搜索 + 学习循环（SQLite FTS5） | ✅（未首发） |
 
@@ -42,6 +43,16 @@ LICENSE 保留上游 Chandra Teja 版权署名；上游未发布修复 #189（ch
 `pi-goal`（目录 `packages/pi-goal`）迁移自 [narumiruna/pi-extensions](https://github.com/narumiruna/pi-extensions) `packages/pi-goal` v0.52.2（npm tarball 与 tag 源一致）。
 **移植约定**：相对导入保留 `.js` 后缀；src 全量搬运，旧弱实现（单文件 index.ts）已删除；`scripts/build-runtime.mjs`、`dist/` 产物与 3 个 dist 构建测试（build-runtime/generated-entry/goal-runtime-smoke）不适用已裁掉；`test/support.ts`（createMockPi/createMockContext）放在仓根 `test/`，上游 `../../../test/support.js` 相对导入保持不变；persistence 子进程测试已改为 `--import tsx` + 源码路径（上游用 node_modules/.cache 构建产物）。
 **降级兼容（关键）**：上游依赖 pi-tui 0.84+ 的 `stripTerminalSequences`（0.80.5 缺失 → goal_complete 报 `is not a function`）；`src/terminal-compat.ts` 用命名空间导入 + 探测（`??` 回退本地等价实现，逻辑与上游 extractAnsiCode/stripTerminalSequences 一致），errors.ts 改从该模块导入。升级上游后若 pi-tui 已导出该函数，命中断言：本包 devDeps 固定在 0.80.5，勿随上游升到 0.84（除非同时加兼容层）。
+
+`pi-compact-display`（目录 `packages/pi-compact-display`）迁移自 [Masterisk-F/pi-compact-display](https://github.com/Masterisk-F/pi-compact-display)
+master b3f6db1（领先已发布 v1.5.0 一个未发布修复 PR #9 renderer-only 兼容；npm 包只发 dist，不可作基线）。
+**移植约定**：`LICENSE` 实为 **GPL-3.0**（npm 元数据误标 ISC），package.json 用 `GPL-3.0-only`，GPLv3 全文与
+Masterisk-F 署名原样保留；相对导入补 `.ts` 后缀（root NodeNext 必需）；上游 vitest.config 的
+`COLORTERM=truecolor` 移入 `tests/renderingHarness.ts`；接受 biome 全量重排，逻辑保真以 `git diff -w`
+对照上游验收（另有 biome `noUselessElse` 一处手工扁平化，语义等价）；上游 tsconfig 只含 `src`、测试从未被
+tsc 检查，类型债已就地修（hermes 先例，全部类型层）。**依赖**：包 devDeps 嵌套
+`@earendil-works/pi-{coding-agent,tui}@1.4.0`（精确；本包需 ≥1.0.1 的 `registerToolRenderer`，
+与 root 0.80.5、pi-subagents 嵌套 0.87.1 三线并存，勿混升）；`@types/node ^26` 嵌套（root 22.20.1 不动）。
 
 `pi-subagents`（目录 `packages/pi-subagents`）迁移自 [nicobailon/pi-subagents](https://github.com/nicobailon/pi-subagents)
 tag v0.71.0（GitHub tarball，非 main HEAD）。
@@ -66,6 +77,12 @@ LICENSE 保留 Nico Bailon 版权署名；上游 oxlint 配置与 `anti-slop-oxl
 4. `@schovest/pi-subagents` 为公开包（无 private，区别于上游 source-checkout 必须 private 的测试断言，
    相关测试已适配）；devDeps 嵌套 `@earendil-works/pi-*@0.87.1`（peer 要求 `pi-ai>=0.86.1`，
    与其余包的 0.80.5 并存，勿混升）；typebox 用 `^1.3.0`（peer optional + devDep）。
+5. 子 session loader 合并宿主 pi 内置扩展工厂（child-session.ts `loadHostBuiltinExtensions`：按文件 URL
+   深导入宿主包 `extensions/index.js` 的 `builtInExtensions`，运行时枚举、零清单维护；宿主无该模块则
+   静默降级，存在但加载失败则 console.warn 一次）。背景：pi CLI 入口会给每个 loader 前置合并内置工厂
+   （1.3.0 起 builtin:mcp/codemode/tool-search），子 loader 不合并时 settings enabled 的 `builtin:*`
+   在子 session 静默缺失。注入 `loadPiCodingAgent`（脚本化模块/二进制嵌入式 SDK）时跳过发现，可用
+   `loadBuiltinExtensions` 显式提供；回放时保留该行为与测试 child-session-builtin-extensions.test.ts。
 
 ### 代码风格
 
@@ -94,14 +111,21 @@ LICENSE 保留 Nico Bailon 版权署名；上游 oxlint 配置与 `anti-slop-oxl
 
 ### 发布
 
-发布脚本与 CI 都按「当前版本已发布则跳过、未发布则发布」逐包执行，`private: true` 的包永不发布
-（如 pi-test-utils）。
+发布脚本与 CI 都按「当前版本已发布则跳过、未发布则发布」逐包执行，`private: true` 的包永不发布。
+
+**永不发布的包**（新会话勿为其升版/发布，CI 也会跳过）：
+
+- `pi-test-utils` — private，仓内测试夹具
+- `pi-config` — 2026-10-08 起停止发布：npm 止版 0.1.3，package.json 已标 `private: true`；本地 0.1.4
+  （typebox peer 修复）不随发布，npm 侧用户停留 0.1.3，属预期而非事故
+- `pi-i18n` — 2026-10-08 起停止发布：npm 止版 0.1.3，package.json 已标 `private: true`（与本地版本一致，无未发布差异）
 
 CI 自动发布（push main 触发，`.github/workflows/publish.yml`）——**日常迭代的标准发布通道**：
 
 - npm **Trusted Publishing（OIDC）** 认证，无需 token；每个包需在 npmjs.com 配置 Trusted Publisher
   （schovest / pi-package-mono / publish.yml）
-- 逐包跳过已发布版本与 private 包
+- 逐包跳过已发布版本与 private 包；CI publish 步骤调用 `scripts/publish-packages.mjs`（与本地
+  同一脚本），单包发布失败不阻断后续包，结束汇总失败清单并以非零码退出
 - 依赖 `package.json` 的 `repository` 字段与 GitHub 仓库匹配（所有包已配置）
 - 工具链要求：Node ≥ 22.14、npm ≥ 11.5.1（CI 用 node 24）
 

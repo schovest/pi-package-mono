@@ -1,0 +1,34 @@
+{
+	"name": "@schovest/pi-compact-display",
+	"version": "0.2.0",
+	"description": "Compact display extension for Pi tools.",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/schovest/pi-package-mono.git"
+	},
+	"keywords": [
+		"pi-package"
+	],
+	"license": "GPL-3.0-only",
+	"type": "module",
+	"files": [
+		"src",
+		"README.md",
+		"README_ja.md",
+		"LICENSE"
+	],
+	"pi": {
+		"extensions": [
+			"./src/index.ts"
+		]
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*",
+		"@earendil-works/pi-tui": "*"
+	},
+	"devDependencies": {
+		"@earendil-works/pi-coding-agent": "1.4.0",
+		"@earendil-works/pi-tui": "1.4.0",
+		"@types/node": "^26"
+	}
+}

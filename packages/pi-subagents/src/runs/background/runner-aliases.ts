@@ -8,6 +8,13 @@
  * aliases those specifiers to the copies shipped inside the installed pi
  * package; the parent computes the same map and hands it to the runner
  * through `JITI_ALIAS`, so child sessions and hooks retain host API identity.
+ *
+ * Specifiers in the runner's own import graph are required: if the host tree
+ * cannot provide one, the install is broken and the launch is refused. The
+ * remaining entries are best-effort (`optional`): hosts gained and later lost
+ * such exports (chord shipped 0.85.0–1.1.x and was dropped in 1.2.0;
+ * pi-agent-core lost `./node` in 1.0.0), and an export nothing imports is
+ * simply omitted rather than blocking the launch.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -15,24 +22,37 @@ import * as path from "node:path";
 export const JITI_ALIAS_ENV = "JITI_ALIAS";
 
 /** Specifiers the runner's import graph may use, with the package and export subpath each resolves to. */
-export const HOST_PEER_ALIASES: ReadonlyArray<{ specifier: string; pkg: string; subpath: string }> = [
+export const HOST_PEER_ALIASES: ReadonlyArray<{
+  specifier: string;
+  pkg: string;
+  subpath: string;
+  /** Absent from some supported hosts; omit instead of failing the launch when unresolvable. */
+  optional?: boolean;
+}> = [
   { specifier: "@earendil-works/pi-coding-agent", pkg: "@earendil-works/pi-coding-agent", subpath: "." },
   { specifier: "@earendil-works/pi-agent-core", pkg: "@earendil-works/pi-agent-core", subpath: "." },
-  { specifier: "@earendil-works/pi-agent-core/node", pkg: "@earendil-works/pi-agent-core", subpath: "./node" },
+  {
+    specifier: "@earendil-works/pi-agent-core/node",
+    pkg: "@earendil-works/pi-agent-core",
+    subpath: "./node",
+    optional: true,
+  },
   { specifier: "@earendil-works/pi-tui", pkg: "@earendil-works/pi-tui", subpath: "." },
   { specifier: "@earendil-works/pi-ai", pkg: "@earendil-works/pi-ai", subpath: "./compat" },
   { specifier: "@earendil-works/pi-ai/compat", pkg: "@earendil-works/pi-ai", subpath: "./compat" },
-  { specifier: "@earendil-works/pi-ai/oauth", pkg: "@earendil-works/pi-ai", subpath: "./oauth" },
-  { specifier: "@earendil-works/pi-ai/providers/all", pkg: "@earendil-works/pi-ai", subpath: "./providers/all" },
+  { specifier: "@earendil-works/pi-ai/oauth", pkg: "@earendil-works/pi-ai", subpath: "./oauth", optional: true },
+  {
+    specifier: "@earendil-works/pi-ai/providers/all",
+    pkg: "@earendil-works/pi-ai",
+    subpath: "./providers/all",
+    optional: true,
+  },
   { specifier: "typebox", pkg: "typebox", subpath: "." },
   { specifier: "typebox/compile", pkg: "typebox", subpath: "./compile" },
-  { specifier: "typebox/value", pkg: "typebox", subpath: "./value" },
-];
-
-/** Public Pi manifests introduce chord in 0.85.0 (absent through 0.84.4). */
-const CHORD_PEER_ALIASES = [
-  { specifier: "@earendil-works/chord", pkg: "@earendil-works/chord", subpath: "." },
-  { specifier: "@earendil-works/chord/context", pkg: "@earendil-works/chord", subpath: "./context" },
+  { specifier: "typebox/value", pkg: "typebox", subpath: "./value", optional: true },
+  // Host dependency 0.85.0–1.1.x; removed again from pi 1.2.0 manifests.
+  { specifier: "@earendil-works/chord", pkg: "@earendil-works/chord", subpath: ".", optional: true },
+  { specifier: "@earendil-works/chord/context", pkg: "@earendil-works/chord", subpath: "./context", optional: true },
 ];
 
 interface PackageManifest {
@@ -154,22 +174,17 @@ function findPeerPackageDir(piPackageRoot: string, pkg: string, hostName: unknow
   return candidates.find((candidate) => readManifest(candidate)?.name === pkg);
 }
 
-/** The alias map the runner needs, or the specifiers that could not be resolved. */
+/** The alias map the runner needs, or the required specifiers that could not be resolved. */
 export function resolveHostPeerAliases(piPackageRoot: string): { aliases: Record<string, string>; missing: string[] } {
   const aliases: Record<string, string> = {};
   const missing: string[] = [];
   const hostManifest = readManifest(piPackageRoot);
-  // Only known stable pre-chord versions may omit it. Unknown/prerelease
-  // hosts retain the required aliases, rather than hiding a broken install.
-  const stableVersion = typeof hostManifest?.version === "string" ? /^0\.(\d+)\.\d+$/.exec(hostManifest.version) : null;
-  const isPreChord = stableVersion !== null && Number(stableVersion[1]) < 85;
-  const required = [...HOST_PEER_ALIASES, ...(isPreChord ? [] : CHORD_PEER_ALIASES)];
-  for (const { specifier, pkg, subpath } of required) {
+  for (const { specifier, pkg, subpath, optional } of HOST_PEER_ALIASES) {
     const packageDir = findPeerPackageDir(piPackageRoot, pkg, hostManifest?.name);
     const target = packageDir ? resolvePackageSubpath(packageDir, subpath) : undefined;
     // Native loaders short-circuit resolution, so aliases must retain the real package's dependency scope.
     if (target && fs.existsSync(target)) aliases[specifier] = fs.realpathSync(target);
-    else missing.push(specifier);
+    else if (!optional) missing.push(specifier);
   }
   return { aliases, missing };
 }

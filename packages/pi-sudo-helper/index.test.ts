@@ -1,7 +1,21 @@
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionContext, ExtensionUIContext } from "@earendil-works/pi-coding-agent";
 import { createMockCtx, createMockPi } from "@schovest/pi-test-utils";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import sudoHelper from "./index.ts";
+
+// spawn / fs 打桩：单测环境里 FIFO 不存在，真实进程会 EPIPE、chmod 会 ENOENT
+// —— 把子进程与文件系统全部虚拟化，tool_call 全流程纯内存跑通
+const { spawnMock } = vi.hoisted(() => ({ spawnMock: vi.fn() }));
+vi.mock("node:child_process", () => ({ spawn: spawnMock }));
+spawnMock.mockImplementation(() => ({
+  stdin: { write: () => true, end: () => {} },
+  kill: () => {},
+}));
+vi.mock("node:fs/promises", () => ({
+  chmod: vi.fn(async () => {}),
+  unlink: vi.fn(async () => {}),
+  writeFile: vi.fn(async () => {}),
+}));
 
 /** tool_call / tool_result 处理器的事件形态（与 runner 事件结构一致） */
 interface ToolCallLike {
@@ -182,5 +196,113 @@ describe("sudo-helper 反应式失败提示", () => {
 
     const hint = getHint(result);
     expect(hint).toContain("sudo: 无法解析主机名");
+  });
+});
+
+// ============================================================================
+// 密码输入超时：120s 无输入自动取消，不长期阻塞 tool_call
+// ============================================================================
+
+/** 密码输入组件的测试用子集（组件未导出，结构断言） */
+interface PasswordInputLike {
+  handleInput(data: string): boolean | undefined;
+  render(width: number): string[];
+  timedOut: boolean;
+}
+
+type DoneFn = (value: boolean) => void;
+type CustomFactory = (tui: unknown, theme: unknown, keybindings: unknown, done: DoneFn) => unknown;
+
+describe("sudo-helper 密码输入超时", () => {
+  let factoryRef: CustomFactory | undefined;
+  const customMock = vi.fn((factory: CustomFactory) => {
+    factoryRef = factory;
+    // 模拟 pi UI：done 调用时关闭弹窗并回传结果
+    return new Promise<boolean>((resolve) => {
+      (customMock as unknown as { resolveRef?: (v: boolean) => void }).resolveRef = resolve;
+    });
+  });
+  // sudo -n true 返回 1（需要密码），mkfifo 返回 0（成功）
+  const execMock = vi.fn(async (cmd: string) => ({
+    stdout: "",
+    stderr: "",
+    code: cmd === "sudo" ? 1 : 0,
+    killed: false,
+  }));
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    factoryRef = undefined;
+    execMock.mockClear();
+    customMock.mockClear();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** 触发 sudo tool_call，驱动到密码弹窗弹出，返回 handler Promise 与组件实例 */
+  async function callSudoWithDialog(command: string) {
+    const { pi, callHandler } = registerHandlers();
+    (pi as unknown as { exec: unknown }).exec = execMock;
+    const input: Record<string, unknown> = { command };
+    const ctx = createMockCtx({
+      hasUI: true,
+      ui: { custom: customMock as unknown as ExtensionUIContext["custom"] },
+    });
+    const pending = callHandler({ type: "tool_call", toolName: "bash", toolCallId: "c1", input }, ctx);
+    // 等 handler 走完预检/FIFO 准备、弹出密码框（fake timers 下用微任务推进）
+    for (let i = 0; i < 50 && !factoryRef; i++) await vi.advanceTimersByTimeAsync(1);
+    expect(factoryRef).toBeDefined();
+    const resolveRef = (customMock as unknown as { resolveRef?: DoneFn }).resolveRef!;
+    const comp = factoryRef!(undefined, undefined, undefined, resolveRef) as PasswordInputLike;
+    return { pending, comp, input };
+  }
+
+  it("120s 无输入 → 超时自动取消：block + 超时 reason，命令不改写", async () => {
+    const { pending, comp, input } = await callSudoWithDialog("sudo systemctl restart nginx");
+    expect(comp.timedOut).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(120_000);
+    const result = (await pending) as { block: boolean; reason: string } | undefined;
+
+    expect(comp.timedOut).toBe(true);
+    expect(result?.block).toBe(true);
+    expect(result?.reason).toContain("超时");
+    expect(input["command"]).toBe("sudo systemctl restart nginx"); // 未被改写
+  });
+
+  it("超时前提交 → 命令改写为 SUDO_ASKPASS sudo -A，后续时间推进无副作用", async () => {
+    const { pending, comp, input } = await callSudoWithDialog("sudo systemctl restart nginx");
+    comp.handleInput("p");
+    comp.handleInput("w");
+    comp.handleInput("\r"); // Enter 提交
+    const result = await pending;
+
+    expect(result).toBeUndefined(); // 放行执行
+    expect(comp.timedOut).toBe(false);
+    expect(input["command"]).toContain("SUDO_ASKPASS=");
+    expect(input["command"]).toContain("sudo -A");
+
+    // 超时定时器已清：推进 10 分钟不应二次触发/报错
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(comp.timedOut).toBe(false);
+  });
+
+  it("Esc 主动取消 → reason 是用户取消而非超时", async () => {
+    const { pending, comp } = await callSudoWithDialog("sudo apt update");
+    comp.handleInput("\x1b"); // Escape
+    const result = (await pending) as { block: boolean; reason: string } | undefined;
+
+    expect(comp.timedOut).toBe(false);
+    expect(result?.block).toBe(true);
+    expect(result?.reason).toContain("取消");
+    expect(result?.reason).not.toContain("超时");
+  });
+
+  it("提示行标注超时行为", async () => {
+    const { comp } = await callSudoWithDialog("sudo apt update");
+    const rendered = comp.render(40).join("\n");
+    expect(rendered).toContain("120s");
+    expect(rendered).toContain("超时");
   });
 });

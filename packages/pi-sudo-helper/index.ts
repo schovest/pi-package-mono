@@ -43,6 +43,9 @@ const CLEANUP_TIMEOUT_MS = 60_000;
 /** sudo 预检超时 */
 const SUDO_PRECHECK_TIMEOUT_MS = 5000;
 
+/** 密码输入超时：无输入到达上限自动取消弹窗，避免 tool_call 长期阻塞 */
+const PASSWORD_INPUT_TIMEOUT_MS = 120_000;
+
 interface SudoResources {
   fifoPath: string;
   scriptPath: string;
@@ -132,17 +135,26 @@ export default function (pi: ExtensionAPI) {
     });
 
     // 弹出遮罩密码输入框（密码直接写入 writer.stdin，不经过 JS string）
+    // 超时看门狗：长时间无输入自动取消弹窗，避免 tool_call 无限期阻塞；
+    // 提交 / 取消 / 异常任一路径退出都在 finally 里清掉定时器
     let submitted = false;
+    let input: PasswordInputComponent | undefined;
+    const inputTimer = setTimeout(() => input?.timeoutCancel(), PASSWORD_INPUT_TIMEOUT_MS);
     try {
       submitted = await ctx.ui.custom<boolean>(
-        (_tui, _theme, _keybindings, done) => new PasswordInputComponent("sudo 密码", writer.stdin, done),
+        (_tui, _theme, _keybindings, done) => {
+          input = new PasswordInputComponent("sudo 密码", writer.stdin, done);
+          return input;
+        },
         { overlay: true },
       );
     } catch {
       submitted = false;
+    } finally {
+      clearTimeout(inputTimer);
     }
 
-    // 用户取消 → 关闭 cat stdin，清理资源
+    // 用户取消 / 超时自动取消 → 关闭 cat stdin，清理资源
     if (!submitted) {
       try {
         writer.stdin.end();
@@ -156,9 +168,15 @@ export default function (pi: ExtensionAPI) {
       }
       await unlink(fifoPath).catch(() => {});
       await unlink(scriptPath).catch(() => {});
-      // 用户主动取消：不给失败反应式提示（block reason 已足够）
+      // 用户主动取消：不给失败反应式提示（block reason 已足够）；
+      // 超时与主动取消都走这里，靠组件 timedOut 标记区分话术
       callCtx.delete(event.toolCallId);
-      return { block: true, reason: "用户取消了 sudo 密码输入" };
+      return {
+        block: true,
+        reason: input?.timedOut
+          ? `sudo 密码输入超时（${PASSWORD_INPUT_TIMEOUT_MS / 1000}s 无输入），已自动取消；需要时重新发起命令再输入`
+          : "用户取消了 sudo 密码输入",
+      };
     }
 
     // 关闭 cat stdin：cat 读到 EOF 后关闭 FIFO 写端
@@ -396,6 +414,9 @@ class PasswordInputComponent implements Component, Focusable {
   private _focused = false;
   private done = false;
 
+  /** 超时自动取消置位（与用户主动 Esc 取消区分提示语） */
+  timedOut = false;
+
   constructor(
     private readonly title: string,
     private readonly writeTarget: { write(data: Buffer | string): boolean },
@@ -474,7 +495,7 @@ class PasswordInputComponent implements Component, Focusable {
     const titleLine = `${REVERSE}${RED_BOLD}${" ".repeat(Math.max(0, titlePadBefore))}${titleText}${" ".repeat(Math.max(0, titlePadAfter))}${RESET}`;
 
     // 提示行
-    const hintText = " Enter 提交 · Esc 取消 ";
+    const hintText = ` Enter 提交 · Esc 取消 · ${PASSWORD_INPUT_TIMEOUT_MS / 1000}s 无输入超时自动取消 `;
     const hintPad = Math.floor((innerWidth - hintText.length) / 2);
     const hintLine = `${DIM}${" ".repeat(Math.max(0, hintPad))}${hintText}${RESET}`;
 
@@ -494,7 +515,14 @@ class PasswordInputComponent implements Component, Focusable {
     this.secure.destroy();
   }
 
+  /** 超时自动取消（幂等；与用户取消同路径，仅置 timedOut 标记区分提示语） */
+  timeoutCancel(): void {
+    this.timedOut = true;
+    this.cancel();
+  }
+
   private submit(): void {
+    if (this.done) return;
     this.done = true;
     // 解密 → 写入 cat stdin → 立即清零（明文仅存活于 write() 调用期间）
     this.secure.flushTo(this.writeTarget);
@@ -502,6 +530,7 @@ class PasswordInputComponent implements Component, Focusable {
   }
 
   private cancel(): void {
+    if (this.done) return;
     this.done = true;
     this.secure.destroy();
     this.resolve(false);

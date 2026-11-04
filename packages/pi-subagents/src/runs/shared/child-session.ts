@@ -142,6 +142,13 @@ export interface DefaultChildSessionFactoryOptions {
    * installed package by absolute path.
    */
   loadPiCodingAgent?: () => Promise<PiCodingAgentModule>;
+  /**
+   * Overrides built-in extension discovery for child loaders. The default reads
+   * the host package's `extensions/index.js`, but only when pi itself is loaded
+   * by the default loader: an injected `loadPiCodingAgent` is a scripted or
+   * embedded module whose loader does not consume host built-ins.
+   */
+  loadBuiltinExtensions?: () => Promise<readonly HostBuiltinExtension[]>;
   /** Upper bound on a disposed child's `session_shutdown` handlers before the session is dropped anyway. */
   shutdownTimeoutMs?: number;
 }
@@ -277,13 +284,19 @@ function flushQueuedProviderRegistrations(
  * its manifest, package identity, entry, and import must all succeed; the bare
  * specifier is used only when no root resolves.
  */
-export async function loadHostPiCodingAgent(): Promise<PiCodingAgentModule> {
+/** Root precedence shared by the host SDK load and built-in extension discovery: running host, explicit override, then the install tree. */
+function resolveHostPiRoot(): { root: string; overrideRoot: string | undefined } | undefined {
   const overrideRoot = process.env[PI_CODING_AGENT_PACKAGE_ROOT_ENV]?.trim() || undefined;
   const runningRoot = resolvePiPackageRoot();
   const selectedOverride = runningRoot === undefined ? overrideRoot : undefined;
   const root = runningRoot ?? selectedOverride ?? resolveInstalledPiPackageRoot();
-  if (root) {
-    const entry = fs.realpathSync(resolveHostPackageEntry(root, selectedOverride));
+  return root ? { root, overrideRoot: selectedOverride } : undefined;
+}
+
+export async function loadHostPiCodingAgent(): Promise<PiCodingAgentModule> {
+  const host = resolveHostPiRoot();
+  if (host) {
+    const entry = fs.realpathSync(resolveHostPackageEntry(host.root, host.overrideRoot));
     return import(pathToFileURL(entry).href);
   }
   return import(PI_CODING_AGENT_PACKAGE);
@@ -315,6 +328,63 @@ function isUnknownRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** Named inline extension a host pi package ships in `extensions/index.js` (`builtin`/`replaceable` exist on newer hosts only). */
+export interface HostBuiltinExtension {
+  name: string;
+  factory: (pi: ExtensionAPI) => void | Promise<void>;
+  hidden?: boolean;
+  builtin?: boolean;
+  replaceable?: boolean;
+}
+
+let hostBuiltinExtensions: readonly HostBuiltinExtension[] | undefined;
+
+function isHostBuiltinExtension(value: unknown): value is HostBuiltinExtension {
+  return isUnknownRecord(value) && typeof value.name === "string" && typeof value.factory === "function";
+}
+
+/**
+ * pi's CLI entry merges its built-in extension factories (mcp, codemode,
+ * tool-search, ...) into every resource loader it builds; without the same
+ * merge, child sessions silently miss `builtin:*` extensions even when
+ * settings enable them. The array is read from the host package at runtime,
+ * so built-ins pi adds later need no change here. Hosts without the module
+ * (before pi shipped built-ins) degrade quietly; a module that exists but
+ * fails to load warns once.
+ */
+export async function loadHostBuiltinExtensions(): Promise<readonly HostBuiltinExtension[]> {
+  hostBuiltinExtensions ??= await readHostBuiltinExtensions();
+  return hostBuiltinExtensions;
+}
+
+async function readHostBuiltinExtensions(): Promise<readonly HostBuiltinExtension[]> {
+  const host = resolveHostPiRoot();
+  if (!host) return [];
+  let entry: string;
+  try {
+    entry = fs.realpathSync(resolveHostPackageEntry(host.root, host.overrideRoot));
+  } catch {
+    return [];
+  }
+  const modulePath = path.join(path.dirname(entry), "extensions", "index.js");
+  if (!fs.existsSync(modulePath)) return [];
+  try {
+    const loaded = (await import(pathToFileURL(fs.realpathSync(modulePath)).href)) as {
+      builtInExtensions?: unknown;
+    };
+    const listed = loaded.builtInExtensions;
+    if (!Array.isArray(listed)) throw new Error("builtInExtensions export is not an array");
+    return listed.filter(isHostBuiltinExtension);
+  } catch (error) {
+    console.warn(
+      `[pi-subagents] failed to load host built-in extensions from ${modulePath}: ${
+        error instanceof Error ? error.message : String(error)
+      }; child sessions will not load pi's built-in extensions.`,
+    );
+    return [];
+  }
+}
+
 /**
  * Default factory: detached/background sessions retain the existing shared
  * runtime; each parent-bound foreground launch gets an isolated runtime.
@@ -336,6 +406,9 @@ export function createDefaultChildSessionFactory(options: DefaultChildSessionFac
   return {
     async create(launch) {
       const pi = await loadPiCodingAgent();
+      const loadBuiltins =
+        options.loadBuiltinExtensions ?? (options.loadPiCodingAgent ? undefined : loadHostBuiltinExtensions);
+      const builtinFactories = loadBuiltins ? await loadBuiltins() : [];
       const modelRuntime = launch.parentProviderRegistry ? await pi.ModelRuntime.create() : await sharedRuntime(pi);
       const agentDir = getAgentDir();
       const settingsManager = pi.SettingsManager.create(launch.cwd, agentDir);
@@ -355,7 +428,7 @@ export function createDefaultChildSessionFactory(options: DefaultChildSessionFac
         noThemes: true,
         noContextFiles: launch.noContextFiles,
         additionalExtensionPaths: launch.extensionPaths,
-        extensionFactories: launch.hooks,
+        extensionFactories: [...builtinFactories, ...launch.hooks],
         extensionsOverride: prioritizeChildPromptRuntime,
         ...(launch.systemPrompt !== undefined ? { systemPrompt: launch.systemPrompt } : {}),
         ...(launch.appendSystemPrompt !== undefined ? { appendSystemPrompt: [launch.appendSystemPrompt] } : {}),

@@ -16,6 +16,9 @@
  * 2FA（OTP）：
  *   - 可通过 `--otp <code>` 或环境变量 `NPM_OTP` 提供
  *   - 未提供时，遇到 EOTP 错误会交互式询问；同一 OTP 过期会再次询问
+ *
+ * 失败处理：单包发布失败（如 npm 侧 Trusted Publisher 配置问题）不阻断后续包，
+ * 结束时汇总失败清单并以非零码退出。
  */
 
 import { execFileSync } from "node:child_process";
@@ -67,6 +70,7 @@ function runPublish(name) {
 
 let publishedCount = 0;
 let skippedCount = 0;
+const failed = [];
 
 for (const dir of packageDirs) {
   const pkgPath = join(packagesDir, dir.name, "package.json");
@@ -93,11 +97,21 @@ for (const dir of packageDirs) {
 
   console.log(`publish ${pkg.name}@${pkg.version}${dryRun ? " (dry-run)" : ""}`);
   // 2FA 循环：EOTP 时询问新 OTP 重试，直到成功或非 OTP 错误
-  for (;;) {
-    if (runPublish(pkg.name)) break;
-    otp = await askOtp();
+  try {
+    for (;;) {
+      if (runPublish(pkg.name)) break;
+      otp = await askOtp();
+    }
+    publishedCount++;
+  } catch (err) {
+    // 单包失败不阻断后续包
+    console.error(`❌ publish ${pkg.name}@${pkg.version} failed: ${err.message ?? err}`);
+    failed.push(`${pkg.name}@${pkg.version}`);
   }
-  publishedCount++;
 }
 
 console.log(`\n✅ done: ${publishedCount} published, ${skippedCount} skipped${dryRun ? " (dry-run)" : ""}`);
+if (failed.length > 0) {
+  console.error(`\n❌ ${failed.length} package(s) failed:\n  - ${failed.join("\n  - ")}`);
+  process.exitCode = 1;
+}
