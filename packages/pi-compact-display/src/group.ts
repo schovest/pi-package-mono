@@ -246,3 +246,12 @@ export class GroupContent {
     return lines.join("\n");
   }
 }
+
+/**
+ * owner が登録されているコンテナのミラー上の子リストを返す (未登録なら undefined)。
+ * thinking 折りたたみ集約 (thinkingGroup.ts) が兄弟走査に使うためのアクセサ。
+ */
+export function getContainerChildren(owner: object): any[] | undefined {
+  const container = parentMap.get(owner);
+  return container ? childrenMap.get(container) : undefined;
+}
