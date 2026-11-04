@@ -160,6 +160,44 @@ describe("loadConfig", () => {
     expect(config.hideThinking).toBe(false);
   });
 
+  it('should support the global "thinkingGrouping" flag', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        thinkingGrouping: true,
+        bash: { mode: "default" },
+      }),
+    );
+
+    const config = loadConfig("/valid/path.json");
+    expect(config.thinkingGrouping).toBe(true);
+  });
+
+  it('should return undefined for "thinkingGrouping" if not specified, even if "default" is specified', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        default: { mode: "lines" },
+      }),
+    );
+
+    const config = loadConfig("/valid/path.json");
+    expect(config.thinkingGrouping).toBeUndefined();
+  });
+
+  it('should return false for "thinkingGrouping" when explicitly set to false (no fallback to "default")', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({
+        thinkingGrouping: false,
+        default: { mode: "lines" },
+      }),
+    );
+
+    const config = loadConfig("/valid/path.json");
+    expect(config.thinkingGrouping).toBe(false);
+  });
+
   it('should support "skill" config and not fall back to "default"', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
     vi.mocked(fs.readFileSync).mockReturnValue(

@@ -22,6 +22,8 @@ export type Config = Record<string, ToolConfig> & {
   grouping?: boolean;
   /** グローバル設定: true でアシスタントメッセージ内の thinking ブロック表示を抑制する */
   hideThinking?: boolean;
+  /** グローバル設定: true で hideThinking:true のとき、ターン全体の thinking を折りたたんで1つのクリック可能なエントリにまとめる */
+  thinkingGrouping?: boolean;
 };
 
 export function loadConfig(configPath: string): Config {
@@ -48,7 +50,13 @@ export function loadConfig(configPath: string): Config {
       if (prop in target) {
         return target[prop];
       }
-      if (prop === "user" || prop === "skill" || prop === "grouping" || prop === "hideThinking") {
+      if (
+        prop === "user" ||
+        prop === "skill" ||
+        prop === "grouping" ||
+        prop === "hideThinking" ||
+        prop === "thinkingGrouping"
+      ) {
         return undefined;
       }
       if ("default" in target) {
