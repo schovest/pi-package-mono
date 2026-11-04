@@ -90,8 +90,9 @@ export function resolveTurnGroup(owner: object): ThinkingTurnGroup | undefined {
 // ウィジェット描画 (thinkingGrouping)
 //
 // リーダーの contentContainer に自描画の折りたたみエントリを挿入する。
-// ホストテーマは index.ts が message_start で捕捉して setCapturedTheme に渡す。
-// 未捕捉時は無色のテキストに降格し、捕獲後の次フレームで自動再スタイルする。
+// スタイルはテーマ単例バインドの getMarkdownTheme() (quoteBorder / quote / italic) を基盤とし、
+// index.ts が message_start で捕捉した capturedTheme があれば thinkingText (上流 parity) を優先する。
+// 捕捉なしでも mdQuote 灰 + 斜体で描く (展開内容は更に引用ブロック左境界で無条件に区別する)。
 // ─────────────────────────────────────────────────────────────
 
 /** index.ts が捕捉したホストテーマ (fg / italic など)。未捕捉時は null。 */
@@ -108,6 +109,41 @@ export function setCapturedTheme(theme: unknown): void {
   if (theme === capturedTheme) return;
   capturedTheme = theme;
   themeGeneration++;
+}
+
+/** getMarkdownTheme() (内部単例バインド、キャプチャ不要) の安全取得。例外時は undefined。 */
+function mdTheme(): any {
+  try {
+    return getMarkdownTheme();
+  } catch {
+    return undefined;
+  }
+}
+
+/** 安全调用 markdown 主题函数：闭包在调用时才解析单例（未初始化会抛错）→ undefined。 */
+function safeMdStyle(style: ((t: string) => string) | undefined, text: string): string | undefined {
+  try {
+    return style?.(text);
+  } catch {
+    return undefined;
+  }
+}
+
+/** 思考文本的样式: capturedTheme (thinkingText) 优先，无则单例绑定的 mdQuote 灰+斜体，都不可用则纯文本。 */
+function styleThinkingText(text: string): string {
+  const theme = capturedTheme as any;
+  if (theme && typeof theme.fg === "function" && typeof theme.italic === "function") {
+    return theme.italic(theme.fg("thinkingText", text));
+  }
+  const md = mdTheme();
+  const quoted = safeMdStyle(md?.quote, text);
+  if (quoted === undefined) return text;
+  return safeMdStyle(md?.italic, quoted) ?? quoted;
+}
+
+/** 引用块左边界：mdQuoteBorder 色的 "│ "（单例绑定，调用时安全解析）；不可用时无色 "│ "。 */
+function quoteBorderPrefix(): string {
+  return safeMdStyle(mdTheme()?.quoteBorder, "│ ") ?? "│ ";
 }
 
 /** リーダーコンポーネント → 展開状態。未登録 (既定) は折りたたみ。 */
@@ -155,36 +191,38 @@ class ThinkingGroupWidget {
     const group = resolveTurnGroup(this.comp);
     // グループ解散 (全 thinking が空になった) や非リーダーでは何も描かない
     if (!group || group.leader !== this.comp) return [];
-    const inner = isExpandedState(this.comp) ? this.expandedInner(group) : this.collapsedInner(group);
-    return inner.render(width);
+    if (!isExpandedState(this.comp)) return this.collapsedInner(group).render(width);
+    // 展開: 上流 blockquote と同じ視覚言語 ("│ " + mdQuoteBorder 色) で無条件に区別する
+    const lines = this.expandedInner(group).render(Math.max(1, width - 2));
+    const border = quoteBorderPrefix();
+    return lines.map((line) => border + line);
   }
 
-  /** 折りたたみ: "Thinking... ×N" (N>=2 のみ計数)。テーマ未捕獲時は素のテキスト。 */
+  /** 折りたたみ: "Thinking... ×N" (N>=2 のみ計数)。スタイルは styleThinkingText 参照 (単例バインド降級)。 */
   private collapsedInner(group: ThinkingTurnGroup): { render(width: number): string[] } {
     const base = typeof this.comp.hiddenThinkingLabel === "string" ? this.comp.hiddenThinkingLabel : "Thinking...";
     const label = group.totalRuns >= 2 ? `${base} ×${group.totalRuns}` : base;
-    const theme = capturedTheme as any;
-    let styled = label;
-    if (theme) {
-      if (typeof theme.fg === "function") styled = theme.fg("thinkingText", styled);
-      if (typeof theme.italic === "function") styled = theme.italic(styled);
-    }
-    return this.cachedInner(`c:${styled}`, () => new Text(styled, this.comp.outputPad ?? 0, 0));
+    return this.cachedInner(
+      `c:${styleThinkingText(label)}`,
+      () => new Text(styleThinkingText(label), this.comp.outputPad ?? 0, 0),
+    );
   }
 
   /** 展開: 全メンバーの thinking を "\n\n" 接続した 1 つの Markdown で描く。 */
   private expandedInner(group: ThinkingTurnGroup): { render(width: number): string[] } {
     const joined = group.members.flatMap((m) => m.texts).join("\n\n");
     const theme = capturedTheme as any;
-    const colorFn = theme && typeof theme.fg === "function" ? (t: string) => theme.fg("thinkingText", t) : undefined;
-    // キーの themeGeneration はテーマ切替検知、"e:" 直後の "+" はテーマ捕獲の有無 —
-    // 未捕獲 → 捕獲の次フレームで色付きに作り直すため
+    const colorFn =
+      theme && typeof theme.fg === "function"
+        ? (t: string) => theme.fg("thinkingText", t)
+        : (t: string) => safeMdStyle(mdTheme()?.quote, t) ?? t;
+    // キーの themeGeneration は capturedTheme 切替検知。length 接頭辞で桁上がり結合の曖昧性を回避。
     return this.cachedInner(
-      `e:${themeGeneration}${colorFn ? "+" : ""}${joined}`,
+      `e:${themeGeneration}:${joined.length}:${joined}`,
       () =>
         new Markdown(joined, this.comp.outputPad ?? 0, 0, this.comp.markdownTheme ?? getMarkdownTheme(), {
           italic: true,
-          ...(colorFn ? { color: colorFn } : {}),
+          color: colorFn,
         }),
     );
   }

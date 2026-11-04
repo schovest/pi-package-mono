@@ -354,7 +354,7 @@ describe("ThinkingGroupWidget — render & toggle", () => {
     expect(widget.render(60).join("\n")).toContain("T1");
   });
 
-  it("should render a plain unstyled label when no theme was captured", () => {
+  it("should fall back to singleton-bound mdQuote styling and quote border when no theme was captured", () => {
     // モジュール級キャッシュが先行ケースから漏れている可能性があるため「未捕獲」に戻す
     setCapturedTheme(undefined);
     const c = new Container();
@@ -363,14 +363,22 @@ describe("ThinkingGroupWidget — render & toggle", () => {
     appendGroupWidget(a1);
     const widget = groupWidgetOf(a1);
 
+    // 収納ラベル: capturedTheme がなくても単例バインドの mdQuote 灰 + 斜体で描く (素テキストに退化しない)
     const collapsed = widget.render(60).join("\n");
-    expect(collapsed.trim()).toBe("Thinking..."); // 純テキスト (ANSI ラッパーなし)
+    expect(collapsed).toContain("Thinking...");
+    expect(collapsed).toMatch(/\u001b\[/); // ANSI スタイルが存在する (mdQuote フォールバック)
 
-    // 展開もテーマ未捕獲ではクラッシュしない (Markdown は comp のテーマにフォールバック)
+    // 展開: 各行に引用ブロック左境界 "│ " が付き、テキストは mdQuote スタイルで描かれる
     const group = resolveTurnGroup(a1);
     expect(group).toBeDefined();
     toggleThinkingGroup(a1, group!);
-    expect(() => widget.render(60)).not.toThrow();
-    expect(widget.render(60).join("\n")).toContain("T1");
+    const lines = widget.render(60);
+    const stripAnsi = (l: string) => l.replace(/\u001b\[[0-9;]*m/g, "");
+    const contentLines = lines.filter((l) => stripAnsi(l).includes("T1"));
+    expect(contentLines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      expect(stripAnsi(line).startsWith("│ ")).toBe(true); // 無条件の視覚区別 (quoteBorder、空行含む全行)
+    }
+    expect(lines.join("\n")).toContain("│ ");
   });
 });

@@ -1,6 +1,6 @@
 {
 	"name": "@schovest/pi-compact-display",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Compact display extension for Pi tools.",
 	"repository": {
 		"type": "git",
