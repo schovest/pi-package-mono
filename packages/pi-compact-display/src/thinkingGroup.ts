@@ -1,3 +1,5 @@
+import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
+import { Markdown, MouseRegion, Spacer, Text } from "@earendil-works/pi-tui";
 import { isAssistantMessage, isUserMessage } from "./componentUtils.ts";
 import type { Config } from "./config.ts";
 import { getContainerChildren } from "./group.ts";
@@ -82,4 +84,145 @@ export function resolveTurnGroup(owner: object): ThinkingTurnGroup | undefined {
   if (members.length === 0) return undefined;
   const totalRuns = members.reduce((n, m) => n + m.texts.length, 0);
   return { leader: members[0].comp, members, totalRuns };
+}
+
+// ─────────────────────────────────────────────────────────────
+// ウィジェット描画 (thinkingGrouping)
+//
+// リーダーの contentContainer に自描画の折りたたみエントリを挿入する。
+// ホストテーマは index.ts が message_start で捕捉して setCapturedTheme に渡す。
+// 未捕捉時は無色のテキストに降格し、捕獲後の次フレームで自動再スタイルする。
+// ─────────────────────────────────────────────────────────────
+
+/** index.ts が捕捉したホストテーマ (fg / italic など)。未捕捉時は null。 */
+let capturedTheme: unknown = null;
+
+/** index.ts の message_start ハンドラから呼ばれ、ホストテーマをキャッシュする。 */
+export function setCapturedTheme(theme: unknown): void {
+  capturedTheme = theme;
+}
+
+/** リーダーコンポーネント → 展開状態。未登録 (既定) は折りたたみ。 */
+const expandedMap = new WeakMap<object, boolean>();
+
+function isExpandedState(comp: object): boolean {
+  return expandedMap.get(comp) === true;
+}
+
+/**
+ * 折りたたみエントリの展開状態を反転し、グループ全メンバーを再描画する。
+ * 各メンバーの updateContent には lastMessage を渡す (上流のクリック再描画経路と同一)。
+ */
+export function toggleThinkingGroup(comp: any, group: ThinkingTurnGroup): void {
+  expandedMap.set(comp, !expandedMap.get(comp));
+  for (const m of group.members) {
+    m.comp.updateContent?.(m.comp.lastMessage);
+  }
+}
+
+/**
+ * 1 ターン分の thinking を 1 エントリで描く動的ウィジェット。
+ * 毎フレーム render が呼ばれ、その時点のミラーでグループを解決し直す
+ * (ストリーミング中のメンバー追加・計数増加に追従する)。
+ * 内側の Text / Markdown は構築キーが変わらない限り作り直さない。
+ */
+class ThinkingGroupWidget {
+  private readonly comp: any;
+  private cacheKey: string | null = null;
+  private cached: { render(width: number): string[] } | null = null;
+
+  constructor(comp: any) {
+    this.comp = comp;
+  }
+
+  invalidate(): void {
+    this.cacheKey = null;
+    this.cached = null;
+  }
+
+  render(width: number): string[] {
+    const group = resolveTurnGroup(this.comp);
+    // グループ解散 (全 thinking が空になった) や非リーダーでは何も描かない
+    if (!group || group.leader !== this.comp) return [];
+    const inner = isExpandedState(this.comp) ? this.expandedInner(group) : this.collapsedInner(group);
+    return inner.render(width);
+  }
+
+  /** 折りたたみ: "Thinking... ×N" (N>=2 のみ計数)。テーマ未捕獲時は素のテキスト。 */
+  private collapsedInner(group: ThinkingTurnGroup): { render(width: number): string[] } {
+    const base = typeof this.comp.hiddenThinkingLabel === "string" ? this.comp.hiddenThinkingLabel : "Thinking...";
+    const label = group.totalRuns >= 2 ? `${base} ×${group.totalRuns}` : base;
+    const theme = capturedTheme as any;
+    let styled = label;
+    if (theme) {
+      if (typeof theme.fg === "function") styled = theme.fg("thinkingText", styled);
+      if (typeof theme.italic === "function") styled = theme.italic(styled);
+    }
+    return this.cachedInner(`c:${styled}`, () => new Text(styled, this.comp.outputPad ?? 0, 0));
+  }
+
+  /** 展開: 全メンバーの thinking を "\n\n" 接続した 1 つの Markdown で描く。 */
+  private expandedInner(group: ThinkingTurnGroup): { render(width: number): string[] } {
+    const joined = group.members.flatMap((m) => m.texts).join("\n\n");
+    const theme = capturedTheme as any;
+    const colorFn = theme && typeof theme.fg === "function" ? (t: string) => theme.fg("thinkingText", t) : undefined;
+    // キー先頭の "+" はテーマ捕獲の有無 — 捕獲後の次フレームで色付きに作り直すため
+    return this.cachedInner(
+      `e:${colorFn ? "+" : ""}${joined}`,
+      () =>
+        new Markdown(joined, this.comp.outputPad ?? 0, 0, this.comp.markdownTheme ?? getMarkdownTheme(), {
+          italic: true,
+          ...(colorFn ? { color: colorFn } : {}),
+        }),
+    );
+  }
+
+  private cachedInner(
+    key: string,
+    build: () => { render(width: number): string[] },
+  ): {
+    render(width: number): string[];
+  } {
+    if (this.cacheKey !== key || !this.cached) {
+      this.cacheKey = key;
+      this.cached = build();
+    }
+    return this.cached;
+  }
+}
+
+/**
+ * リーダーコンポーネントの contentContainer に折りたたみエントリを挿入する。
+ * 挿入位置は元メッセージ内の最初の thinking ブロック位置から計算する
+ * (上流は thinking 除去後に [前導 Spacer, ...可視 text] のみ描くため)。
+ * thinking なし / グループなし / 非リーダーは no-op。
+ */
+export function appendGroupWidget(comp: any): void {
+  const message = readOriginalMessage(comp);
+  if (extractThinkingTexts(message).length === 0) return;
+  const group = resolveTurnGroup(comp);
+  if (!group || group.leader !== comp) return;
+
+  const content: any[] = Array.isArray(message?.content) ? message.content : [];
+  const isVisibleText = (c: any) => c?.type === "text" && typeof c.text === "string" && c.text.trim() !== "";
+  const firstThinking = content.findIndex((c: any) => c?.type === "thinking");
+  const textBefore = content.slice(0, firstThinking).filter(isVisibleText).length;
+  const hasTextAfter = content.slice(firstThinking + 1).some(isVisibleText);
+  // 先頭の +1 は上流が可視 text を持つメッセージに置く前導 Spacer の分
+  const index = (content.some(isVisibleText) ? 1 : 0) + textBefore;
+
+  const block: any[] = [];
+  if (index === 0) block.push(new Spacer(1)); // 上流が置かなかった前導 Spacer を補う
+  block.push(
+    new MouseRegion(new ThinkingGroupWidget(comp), () => {
+      const g = resolveTurnGroup(comp);
+      if (g) toggleThinkingGroup(comp, g);
+      return { handled: true };
+    }),
+  );
+  if (hasTextAfter) block.push(new Spacer(1));
+
+  const children = comp.contentContainer?.children;
+  if (!Array.isArray(children)) return;
+  children.splice(Math.min(index, children.length), 0, ...block);
 }
