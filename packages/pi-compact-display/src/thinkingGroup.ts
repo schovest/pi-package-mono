@@ -111,12 +111,15 @@ function isExpandedState(comp: object): boolean {
 
 /**
  * 折りたたみエントリの展開状態を反転し、グループ全メンバーを再描画する。
- * 各メンバーの updateContent には lastMessage を渡す (上流のクリック再描画経路と同一)。
+ * 各メンバーの updateContent には元メッセージ (readOriginalMessage) を渡す。
+ * index.ts の折りたたみ集約パッチ下では lastMessage は thinking 除去済みのため、
+ * これを渡すと contentContainer 再構築でウィジェットが消えてしまう
+ * (「元メッセージで再描画」は上流のクリック再描画経路と同じセマンティクス)。
  */
 export function toggleThinkingGroup(comp: any, group: ThinkingTurnGroup): void {
   expandedMap.set(comp, !expandedMap.get(comp));
   for (const m of group.members) {
-    m.comp.updateContent?.(m.comp.lastMessage);
+    m.comp.updateContent?.(readOriginalMessage(m.comp));
   }
 }
 

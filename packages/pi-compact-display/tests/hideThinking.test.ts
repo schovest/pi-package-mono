@@ -1,5 +1,5 @@
 import fs from "fs";
-import { AssistantMessageComponent } from "@earendil-works/pi-coding-agent";
+import { AssistantMessageComponent, initTheme } from "@earendil-works/pi-coding-agent";
 import { Container, Markdown, MouseRegion, Spacer } from "@earendil-works/pi-tui";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import extension from "../src/index.ts";
@@ -260,5 +260,35 @@ describe("thinkingGrouping — updateContent wiring", () => {
     expect(region).toBeDefined();
     const rendered = ((region as any).child as { render(width: number): string[] }).render(60).join("\n");
     expect(rendered).toContain("~<thinkingText>Thinking...</thinkingText>~");
+  });
+
+  it("should rebuild the widget from the original message on toggle click (real wiring)", () => {
+    // 展開描画の Markdown 構築にホストテーマが必要 (thinkingGroup.test.ts と同じ初期化)
+    initTheme("dark");
+    loadExtension({ hideThinking: true, thinkingGrouping: true });
+
+    const container = new Container();
+    const leader = mountAssistant(container, makeMessage([thinking("T1")]));
+    mountAssistant(container, makeMessage([thinking("T2")]));
+
+    const region = groupWidgetRegions(leader)[0];
+    expect(region).toBeDefined();
+
+    // 左クリックで展開 — ウィジェットは消えず、全メンバーの thinking が描かれる
+    const first = (region as any).handleMouse({ type: "click", button: "left", x: 0, y: 0 } as any);
+    expect(first).toEqual({ handled: true });
+    const expandedRegion = groupWidgetRegions(leader)[0];
+    expect(expandedRegion).toBeDefined();
+    const expanded = ((expandedRegion as any).child as { render(width: number): string[] }).render(60).join("\n");
+    expect(expanded).toContain("T1");
+    expect(expanded).toContain("T2");
+
+    // 再クリックで折りたたみラベルに戻る (計数 = 全メンバーの run 合計)
+    (expandedRegion as any).handleMouse({ type: "click", button: "left", x: 0, y: 0 } as any);
+    const collapsedRegion = groupWidgetRegions(leader)[0];
+    expect(collapsedRegion).toBeDefined();
+    const collapsed = ((collapsedRegion as any).child as { render(width: number): string[] }).render(60).join("\n");
+    expect(collapsed).toContain("Thinking... ×2");
+    expect(collapsed).not.toContain("T1");
   });
 });
