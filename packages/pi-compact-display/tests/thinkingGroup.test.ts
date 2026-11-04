@@ -329,6 +329,33 @@ describe("ThinkingGroupWidget — render & toggle", () => {
     }
   });
 
+  it("should toggle only on left clicks (move/right-click events ignored)", () => {
+    const c = new Container();
+    const a1 = makeWidgetAssistant([thinking("T1")]);
+    const a2 = makeWidgetAssistant([thinking("T2")]);
+    trackChild(c, a1);
+    trackChild(c, a2);
+    appendGroupWidget(a1);
+    const mr = (a1.contentContainer.children as any[]).find(
+      (ch) => ch instanceof MouseRegion,
+    ) as MouseRegion;
+    const widget = (mr as any).child;
+
+    // MouseRegion はあらゆるマウスイベントを onMouse に流す (上流と同じガードが必要)
+    expect(mr.handleMouse({ type: "move", button: "none", x: 0, y: 0 } as any)).toBeUndefined();
+    expect(mr.handleMouse({ type: "click", button: "right", x: 0, y: 0 } as any)).toBeUndefined();
+    expect(a1.updateContent).not.toHaveBeenCalled();
+    expect(a2.updateContent).not.toHaveBeenCalled();
+    expect(widget.render(60).join("\n")).toContain("Thinking... ×2"); // まだ折りたたみ
+
+    // 左クリックのみトグル (既存動作)
+    const result = mr.handleMouse({ type: "click", button: "left", x: 0, y: 0 } as any);
+    expect(result).toEqual({ handled: true });
+    expect(a1.updateContent).toHaveBeenCalledTimes(1);
+    expect(a2.updateContent).toHaveBeenCalledTimes(1);
+    expect(widget.render(60).join("\n")).toContain("T1");
+  });
+
   it("should render a plain unstyled label when no theme was captured", () => {
     // モジュール級キャッシュが先行ケースから漏れている可能性があるため「未捕獲」に戻す
     setCapturedTheme(undefined);

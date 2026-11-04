@@ -214,7 +214,10 @@ export function appendGroupWidget(comp: any): void {
   const block: any[] = [];
   if (index === 0) block.push(new Spacer(1)); // 上流が置かなかった前導 Spacer を補う
   block.push(
-    new MouseRegion(new ThinkingGroupWidget(comp), () => {
+    new MouseRegion(new ThinkingGroupWidget(comp), (event: any) => {
+      // MouseRegion はあらゆるマウスイベントを onMouse に流す (子に handleMouse が無い場合)。
+      // 上流の thinking ラベルと同じく左クリックでのみトグルする (hover での点滅を防ぐ)。
+      if (event?.type !== "click" || event?.button !== "left") return undefined;
       const g = resolveTurnGroup(comp);
       if (g) toggleThinkingGroup(comp, g);
       return { handled: true };
