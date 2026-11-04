@@ -57,8 +57,12 @@ export default function (pi: ExtensionAPI) {
   // 三分岐 (thinkingGrouping 拡張):
   //   ① isActive (hideThinking + thinkingGrouping 両 true): thinking 除去前に元メッセージを
   //      __piCompactOriginalMessage に退避し、描画後に領隊へ折りたたみウィジェットを挿入する。
+  //      ホストの再描画経路 (invalidate / setHiddenThinkingLabel / setHideThinkingBlock /
+  //      setOutputPad) は thinking 除去済みの lastMessage で呼び直すため、その場合は退避した
+  //      元メッセージを実効メッセージとして使い同じ絵 (ウィジェット含む) を作り直す。
   //      appendGroupWidget は非冪等だが、オリジナルが contentContainer を clear して毎回
-  //      再構築するため毎呼び出し 1 回だけ呼べば良い (生成直後の未 track は no-op)。
+  //      再構築するため毎呼び出し 1 回だけ呼べば良い (生成直後の未 track は no-op、
+  //      リプレイは customAddChild 側の追い挿入で補う)。
   //   ② hideThinking のみ: 従来の純粋隠蔽 (上記の動作)。
   //   ③ それ以外: 素通し。
   // @ts-ignore
@@ -66,12 +70,20 @@ export default function (pi: ExtensionAPI) {
   // @ts-ignore
   AssistantMessageComponent.prototype.updateContent = function (message: any) {
     if (isActive(config)) {
-      const content = Array.isArray(message?.content) ? message.content : [];
-      const hasThinking = content.some((c: any) => c.type === "thinking");
-      if (hasThinking) (this as any).__piCompactOriginalMessage = message;
-      const target = hasThinking ? { ...message, content: content.filter((c: any) => c.type !== "thinking") } : message;
+      const hasThinking = (m: any) => Array.isArray(m?.content) && m.content.some((c: any) => c?.type === "thinking");
+      // 実効メッセージ: 呼び出し側のメッセージに thinking があればそれを、なければ (ホスト再描画
+      // が渡す除去済み lastMessage の場合) 退避した元メッセージを優先する。退避 ref は
+      // 同一のまま再設定されるため冪等 (除去済みメッセージで退避が上書きされることはない)。
+      const stash = (this as any).__piCompactOriginalMessage;
+      const effective = hasThinking(message) ? message : hasThinking(stash) ? stash : message;
+      const content = Array.isArray(effective?.content) ? effective.content : [];
+      const effectiveHasThinking = content.some((c: any) => c?.type === "thinking");
+      if (effectiveHasThinking) (this as any).__piCompactOriginalMessage = effective;
+      const target = effectiveHasThinking
+        ? { ...effective, content: content.filter((c: any) => c.type !== "thinking") }
+        : effective;
       const result = originalUpdateContent.call(this, target);
-      if (hasThinking) appendGroupWidget(this);
+      if (effectiveHasThinking) appendGroupWidget(this);
       return result;
     }
     if (config.hideThinking) {
@@ -175,6 +187,16 @@ export default function (pi: ExtensionAPI) {
       // ネストしたパッチ (外側が trackChild する) の場合も最終状態は undefined で良い
       // (外側の finally でも同様にクリアされる)。
       (comp as any).__piCompactTrackedBy = undefined;
+    }
+
+    // リプレイ経路の追い挿入: ホストは AssistantMessageComponent を「コンストラクタ内 updateContent
+    // (ミラー未登録 = 挿入 no-op) → addChild」の順で配置し、その後 updateContent を呼ばない。
+    // そのためミラー登録直後 (trackChild 成功後) にここで挿入する。ネストしたパッチでは内側の
+    // 呼び出しはまだ trackChild されていないため no-op になり、外側の 1 回だけが挿入する。
+    // ライブ経路はこの後の updateContent が contentContainer を clear して作り直すため
+    // 二重挿入にはならない (毎回 1 個)。
+    if (isActive(config) && isAssistantMessage(comp)) {
+      appendGroupWidget(comp);
     }
 
     if (userNoPad || skillNoPad) {

@@ -97,9 +97,17 @@ export function resolveTurnGroup(owner: object): ThinkingTurnGroup | undefined {
 /** index.ts が捕捉したホストテーマ (fg / italic など)。未捕捉時は null。 */
 let capturedTheme: unknown = null;
 
+/**
+ * テーマ参照が実際に変化した回数。展開キャッシュのキーに含める — joined が同じでも
+ * テーマが変われば色付き Markdown を作り直し、古い colorFn 閉包を使い回さない。
+ */
+let themeGeneration = 0;
+
 /** index.ts の message_start ハンドラから呼ばれ、ホストテーマをキャッシュする。 */
 export function setCapturedTheme(theme: unknown): void {
+  if (theme === capturedTheme) return;
   capturedTheme = theme;
+  themeGeneration++;
 }
 
 /** リーダーコンポーネント → 展開状態。未登録 (既定) は折りたたみ。 */
@@ -169,9 +177,10 @@ class ThinkingGroupWidget {
     const joined = group.members.flatMap((m) => m.texts).join("\n\n");
     const theme = capturedTheme as any;
     const colorFn = theme && typeof theme.fg === "function" ? (t: string) => theme.fg("thinkingText", t) : undefined;
-    // キー先頭の "+" はテーマ捕獲の有無 — 捕獲後の次フレームで色付きに作り直すため
+    // キーの themeGeneration はテーマ切替検知、"e:" 直後の "+" はテーマ捕獲の有無 —
+    // 未捕獲 → 捕獲の次フレームで色付きに作り直すため
     return this.cachedInner(
-      `e:${colorFn ? "+" : ""}${joined}`,
+      `e:${themeGeneration}${colorFn ? "+" : ""}${joined}`,
       () =>
         new Markdown(joined, this.comp.outputPad ?? 0, 0, this.comp.markdownTheme ?? getMarkdownTheme(), {
           italic: true,

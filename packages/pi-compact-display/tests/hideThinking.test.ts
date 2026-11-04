@@ -262,6 +262,70 @@ describe("thinkingGrouping — updateContent wiring", () => {
     expect(rendered).toContain("~<thinkingText>Thinking...</thinkingText>~");
   });
 
+  it("should insert the widget when the component is attached after construction (replay path)", () => {
+    loadExtension({ hideThinking: true, thinkingGrouping: true });
+
+    const container = new Container();
+    const message = makeMessage([thinking("T1")]);
+    // ホストのリプレイ経路 (interactive-mode): コンストラクタが updateContent を呼ぶのは
+    // addChild より前 (ミラー未登録 = 挿入 no-op)。その後 addChild するだけで再 updateContent は無い。
+    const comp = new AssistantMessageComponent(message);
+    expect(groupWidgetRegions(comp)).toHaveLength(0); // 未接続では挿入されない
+
+    container.addChild(comp);
+
+    expect(groupWidgetRegions(comp)).toHaveLength(1);
+  });
+
+  it("should keep the widget across host redraws (invalidate / setHiddenThinkingLabel)", () => {
+    loadExtension({ hideThinking: true, thinkingGrouping: true });
+
+    const container = new Container();
+    const leader = mountAssistant(container, makeMessage([thinking("T1"), textBlock("hi")]));
+    expect(groupWidgetRegions(leader)).toHaveLength(1);
+
+    // invalidate() は thinking 除去済みの lastMessage で contentContainer を作り直す —
+    // 消えずに同じ位置へ再挿入されること
+    (leader as any).invalidate();
+    expect(groupWidgetRegions(leader)).toHaveLength(1);
+    const kids = contentKids(leader);
+    expect(kids[1]).toBeInstanceOf(MouseRegion);
+
+    // ホストの thinking ラベル変更経路 (setHiddenThinkingLabel → updateContent) でも消えない
+    (leader as any).setHiddenThinkingLabel("Thinking (hidden)…");
+    expect(groupWidgetRegions(leader)).toHaveLength(1);
+  });
+
+  it("should rebuild expanded rendering with the new theme after a theme change", async () => {
+    // 展開 Markdown の構築にホストテーマが必要 (他の real wiring ケースと同じ初期化)
+    initTheme("dark");
+    const mockPi = loadExtension({ hideThinking: true, thinkingGrouping: true });
+    const registered = mockPi.on.mock.calls.filter((c: any[]) => c[0] === "message_start");
+    const handler = registered[0][1] as any;
+    const mkTheme = (tag: string) => ({
+      fg: (name: string, s: string) => `<${tag}:${name}>${s}</${tag}:${name}>`,
+      italic: (s: string) => `~${s}~`,
+    });
+
+    await handler({}, { ui: { theme: mkTheme("A") } });
+    const container = new Container();
+    const leader = mountAssistant(container, makeMessage([thinking("T1")]));
+    const region = groupWidgetRegions(leader)[0];
+    expect(region).toBeDefined();
+
+    // 左クリックで展開 — theme A の colorFn でキャッシュが作られる
+    (region as any).handleMouse({ type: "click", button: "left", x: 0, y: 0 } as any);
+    const renderExpanded = () =>
+      ((groupWidgetRegions(leader)[0] as any).child as { render(width: number): string[] }).render(60).join("\n");
+    expect(renderExpanded()).toContain("<A:thinkingText>");
+
+    // テーマ切替 (message_start で捕捉) — joined が不変でも新 colorFn で作り直す
+    await handler({}, { ui: { theme: mkTheme("B") } });
+    const withB = renderExpanded();
+    expect(withB).toContain("<B:thinkingText>");
+    expect(withB).not.toContain("<A:thinkingText>");
+  });
+
   it("should rebuild the widget from the original message on toggle click (real wiring)", () => {
     // 展開描画の Markdown 構築にホストテーマが必要 (thinkingGroup.test.ts と同じ初期化)
     initTheme("dark");
