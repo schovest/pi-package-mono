@@ -12,6 +12,7 @@ import { getEffectiveToolName, loadConfig, resolveToolConfig } from "./config.ts
 import { cleanContextMessages } from "./contextUtils.ts";
 import { resetChildren, trackChild, untrackChild } from "./group.ts";
 import { SummaryTracker } from "./state.ts";
+import { appendGroupWidget, isActive, setCapturedTheme } from "./thinkingGroup.ts";
 import { registerToolRenderers } from "./tools.ts";
 
 export default function (pi: ExtensionAPI) {
@@ -21,6 +22,15 @@ export default function (pi: ExtensionAPI) {
   const configPath = path.join(os.homedir(), ".pi", "agent", "extensions", "pi-compact-display", "config.json");
   const config = loadConfig(configPath);
   const tracker = new SummaryTracker();
+
+  // ── Capture host theme for thinkingGrouping labels ──
+  // thinkingGroup.ts の自描画ラベルはホストテーマ (fg / italic) を必要とする。message_start は
+  // 毎ターン・コンポーネント生成前に発火するためここで捕捉して渡す (捕獲後の次フレームで
+  // 自動再スタイル)。headless など ctx.ui.theme が無い場合は何もしない (無色降格は同モジュール側)。
+  pi.on("message_start", async (_event, ctx) => {
+    const theme = (ctx as any)?.ui?.theme;
+    if (theme) setCapturedTheme(theme);
+  });
 
   // @ts-ignore
   const originalRebuild = UserMessageComponent.prototype.rebuild;
@@ -43,10 +53,27 @@ export default function (pi: ExtensionAPI) {
   // thinking コンテンツブロックを message.content から除去してからオリジナルの処理に渡す。
   // これにより Pi の hideThinkingBlock 設定 (キーバインド toggle) の状態に関わらず
   // thinking ブロックの表示を完全に抑制できる。
+  //
+  // 三分岐 (thinkingGrouping 拡張):
+  //   ① isActive (hideThinking + thinkingGrouping 両 true): thinking 除去前に元メッセージを
+  //      __piCompactOriginalMessage に退避し、描画後に領隊へ折りたたみウィジェットを挿入する。
+  //      appendGroupWidget は非冪等だが、オリジナルが contentContainer を clear して毎回
+  //      再構築するため毎呼び出し 1 回だけ呼べば良い (生成直後の未 track は no-op)。
+  //   ② hideThinking のみ: 従来の純粋隠蔽 (上記の動作)。
+  //   ③ それ以外: 素通し。
   // @ts-ignore
   const originalUpdateContent = AssistantMessageComponent.prototype.updateContent;
   // @ts-ignore
   AssistantMessageComponent.prototype.updateContent = function (message: any) {
+    if (isActive(config)) {
+      const content = Array.isArray(message?.content) ? message.content : [];
+      const hasThinking = content.some((c: any) => c.type === "thinking");
+      if (hasThinking) (this as any).__piCompactOriginalMessage = message;
+      const target = hasThinking ? { ...message, content: content.filter((c: any) => c.type !== "thinking") } : message;
+      const result = originalUpdateContent.call(this, target);
+      if (hasThinking) appendGroupWidget(this);
+      return result;
+    }
     if (config.hideThinking) {
       const filtered = {
         ...message,
