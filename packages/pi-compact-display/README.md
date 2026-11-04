@@ -15,6 +15,7 @@ It helps keep your context and screen clean by limiting overly long tool outputs
 - **Line Limit & Padding Removal**: Limit the number of output lines and automatically strip empty padding lines.
 - **Grouped Tool Results**: With `grouping` enabled, all `lines`-mode calls in one user turn are combined into a single aggregation line (e.g. `⚡ bash ×3`).
 - **Suppress Thinking Indicator**: With `hideThinking` enabled, the "Thinking..." indicator (and full thinking blocks) shown for thinking models are hidden from the assistant messages.
+- **Merged Thinking Indicator**: With `thinkingGrouping` enabled (requires `hideThinking`), all thinking of one user turn is merged into a single clickable entry (`Thinking... ×N`); click to expand the merged thinking content.
 - **Support for External Tools**: Override the display settings not only for Pi's built-in tools but also for any custom tools added by other extensions.
 - **Expandable Details**: Fully supports Pi's native expand feature (e.g., pressing `Ctrl+O` in the TUI), overriding the limits to show the full output.
 
@@ -106,6 +107,7 @@ The configuration is in JSON format, where the key is the "tool name" and the va
 {
   "grouping": true,
   "hideThinking": true,
+  "thinkingGrouping": true,
   "user": {
     "noPadding": true
   },
@@ -223,6 +225,20 @@ Thinking-capable models may emit `thinking` content blocks, which Pi renders as 
 ```
 
 - **`hideThinking`** (`boolean`): Set to `true` to suppress the `"Thinking..."` indicator and all thinking content in assistant messages. Like `"user"` and `"grouping"`, this setting is not affected by other configurations such as `"default"` and is only applied if explicitly defined.
+
+#### Merged Thinking (`thinkingGrouping`)
+
+Instead of hiding thinking entirely, `thinkingGrouping` keeps **one clickable entry per user turn** that contains all thinking of the turn. Even when the assistant splits its work into multiple assistant messages (multiple thinking passes), everything in the same user turn stays in one entry.
+
+**Configuration Example:**
+```json
+{
+  "hideThinking": true,
+  "thinkingGrouping": true
+}
+```
+
+- **`thinkingGrouping`** (`boolean`): Set to `true` to render all thinking blocks within one user turn as a single clickable entry, placed where the turn's first thinking block appeared. Only effective when `hideThinking` is also `true` (with `hideThinking` alone, thinking is simply hidden). When collapsed, the entry shows the host's hidden-thinking label (`"Thinking..."` by default) with a count such as `Thinking... ×N` when the turn has two or more thinking runs. Clicking the entry expands all thinking of the turn, rendered in order as italic Markdown in the `thinkingText` color; clicking again collapses it. After a session reload the entry is collapsed by default, and Pi's thinking display toggle has no effect while this mode is active. Like `"user"` and `"grouping"`, this setting is not affected by other configurations such as `"default"` and is only applied if explicitly defined. Default is `false`.
 
 ---
 

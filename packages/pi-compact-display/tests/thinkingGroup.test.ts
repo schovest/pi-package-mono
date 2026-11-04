@@ -336,9 +336,7 @@ describe("ThinkingGroupWidget — render & toggle", () => {
     trackChild(c, a1);
     trackChild(c, a2);
     appendGroupWidget(a1);
-    const mr = (a1.contentContainer.children as any[]).find(
-      (ch) => ch instanceof MouseRegion,
-    ) as MouseRegion;
+    const mr = (a1.contentContainer.children as any[]).find((ch) => ch instanceof MouseRegion) as MouseRegion;
     const widget = (mr as any).child;
 
     // MouseRegion はあらゆるマウスイベントを onMouse に流す (上流と同じガードが必要)
