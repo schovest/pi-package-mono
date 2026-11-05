@@ -60,8 +60,9 @@ export default function (pi: ExtensionAPI) {
   //      ホストの再描画経路 (invalidate / setHiddenThinkingLabel / setHideThinkingBlock /
   //      setOutputPad) は thinking 除去済みの lastMessage で呼び直すため、その場合は退避した
   //      元メッセージを実効メッセージとして使い同じ絵 (ウィジェット含む) を作り直す。
-  //      appendGroupWidget は非冪等だが、オリジナルが contentContainer を clear して毎回
-  //      再構築するため毎呼び出し 1 回だけ呼べば良い (生成直後の未 track は no-op、
+  //      appendGroupWidget は冪等 (再挿入前に自ブロックを撤去) なので、ネストしたパッチ
+  //      (拡張ファクトリの同プロセス再実行、例: pi-subagents 子 session の ambient 再ロード)
+  //      で多重に呼ばれてもリーダーには 1 ブロックしか残らない (生成直後の未 track は no-op、
   //      リプレイは customAddChild 側の追い挿入で補う)。
   //   ② hideThinking のみ: 従来の純粋隠蔽 (上記の動作)。
   //   ③ それ以外: 素通し。

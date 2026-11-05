@@ -242,10 +242,23 @@ class ThinkingGroupWidget {
 }
 
 /**
+ * appendGroupWidget が挿入したブロック要素 (Spacer / MouseRegion) に付ける目印。
+ * 挿入前に旧ブロックを撤去する冪等化に使う。拡張ファクトリが同プロセスで再実行されると
+ * (pi-subagents の子 session が ambient extensions を再ロードする等)
+ * AssistantMessageComponent.prototype.updateContent は二重に包裹され、内外のパッチが
+ * それぞれ appendGroupWidget を呼ぶ。撤去なしの挿入だとウィジェットが 2 個残り
+ * 「Thinking... ×N」が 2 行描画されてしまうため、再挿入時に自ブロックを摘み取る。
+ */
+const WIDGET_BLOCK_MARKER = "__piCompactThinkingGroupBlock";
+
+/**
  * リーダーコンポーネントの contentContainer に折りたたみエントリを挿入する。
  * 挿入位置は元メッセージ内の最初の thinking ブロック位置から計算する
  * (上流は thinking 除去後に [前導 Spacer, ...可視 text] のみ描くため)。
  * thinking なし / グループなし / 非リーダーは no-op。
+ * 冪等: 挿入前に前回の自ブロック (WIDGET_BLOCK_MARKER 印付き) を撤去するため、
+ * updateContent の再構築を伴わない重複呼び出し (ネストしたパッチ、customAddChild の
+ * 追い挿入との競合) でもリーダーには常に 1 ブロックしか残らない。
  */
 export function appendGroupWidget(comp: any): void {
   const message = readOriginalMessage(comp);
@@ -277,5 +290,13 @@ export function appendGroupWidget(comp: any): void {
 
   const children = comp.contentContainer?.children;
   if (!Array.isArray(children)) return;
+  // 冪等化: 前回挿入の自ブロックを撤去してから挿入する。ミラーは addChild 経由でしか
+  // 観測しないため、直接 splice による撤去・挿入はミラーに影響しない。
+  for (let i = children.length - 1; i >= 0; i--) {
+    if ((children[i] as any)?.[WIDGET_BLOCK_MARKER] === true) children.splice(i, 1);
+  }
+  for (const child of block) {
+    (child as any)[WIDGET_BLOCK_MARKER] = true;
+  }
   children.splice(Math.min(index, children.length), 0, ...block);
 }
