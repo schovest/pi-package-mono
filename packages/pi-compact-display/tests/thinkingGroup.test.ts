@@ -102,13 +102,14 @@ describe("extractThinkingTexts", () => {
 // ── resolveTurnGroup ──
 
 describe("resolveTurnGroup", () => {
-  it("should aggregate thinking runs across assistant messages of the same turn", () => {
+  it("should start a new group at an assistant message with visible text (own thinking leads it)", () => {
     const c = new Container();
     const a1 = makeAssistant([thinking("T1")]);
     const tool = makeTool("bash");
     // a2 は lastMessage が上流フィルタ済みでも __piCompactOriginalMessage を優先して読む
+    // (退避元メッセージには正文も残る = 可視 text 付き → a2 は新グループの先頭になる)
     const a2 = makeAssistant([textBlock("hi")], {
-      __piCompactOriginalMessage: { role: "assistant", content: [thinking("T2"), thinking("T3")] },
+      __piCompactOriginalMessage: { role: "assistant", content: [thinking("T2"), thinking("T3"), textBlock("hi")] },
     });
     const a3 = makeAssistant([textBlock("no thinking")]);
     trackChild(c, makeUserMsg());
@@ -117,13 +118,116 @@ describe("resolveTurnGroup", () => {
     trackChild(c, a2);
     trackChild(c, a3);
 
+    // a2 自身: a1 とはマージせず、自メッセージから新グループを開始する
     const g = resolveTurnGroup(a2);
     expect(g).toBeDefined();
+    expect(g?.leader).toBe(a2);
+    expect(g?.members.map((m) => m.comp)).toEqual([a2]);
+    expect(g?.members[0]?.texts).toEqual(["T2", "T3"]); // 同一メッセージ内の複数 run も両方計上
+    expect(g?.totalRuns).toBe(2);
+    // a1 側: a2 の正文で打ち切られる
+    const g1 = resolveTurnGroup(a1);
+    expect(g1?.leader).toBe(a1);
+    expect(g1?.members.map((m) => m.comp)).toEqual([a1]);
+    expect(g1?.totalRuns).toBe(1);
+  });
+
+  it("should merge thinking of consecutive textless assistant messages in one turn", () => {
+    const c = new Container();
+    const a1 = makeAssistant([thinking("T1")]);
+    const tool = makeTool("bash");
+    const a2 = makeAssistant([thinking("T2")]);
+    trackChild(c, makeUserMsg());
+    trackChild(c, a1);
+    trackChild(c, tool);
+    trackChild(c, a2);
+
+    // 正文なしの thinking 連鎖は従来通り 1 グループにマージする
+    const g = resolveTurnGroup(a2);
     expect(g?.leader).toBe(a1);
     expect(g?.members.map((m) => m.comp)).toEqual([a1, a2]);
-    expect(g?.members[0]?.texts).toEqual(["T1"]);
-    expect(g?.members[1]?.texts).toEqual(["T2", "T3"]); // 同一メッセージ内の複数 run も両方計上
-    expect(g?.totalRuns).toBe(3);
+    expect(g?.totalRuns).toBe(2);
+  });
+
+  it("should split the group at a text-only assistant message", () => {
+    const c = new Container();
+    const a1 = makeAssistant([thinking("T1")]);
+    const answer = makeAssistant([textBlock("answer")]);
+    const a2 = makeAssistant([thinking("T2")]);
+    trackChild(c, makeUserMsg());
+    trackChild(c, a1);
+    trackChild(c, answer);
+    trackChild(c, a2);
+
+    const g1 = resolveTurnGroup(a1);
+    expect(g1?.leader).toBe(a1);
+    expect(g1?.members.map((m) => m.comp)).toEqual([a1]);
+    const g2 = resolveTurnGroup(a2);
+    expect(g2?.leader).toBe(a2);
+    expect(g2?.members.map((m) => m.comp)).toEqual([a2]);
+  });
+
+  it("should NOT split at whitespace-only assistant text", () => {
+    const c = new Container();
+    const a1 = makeAssistant([thinking("T1")]);
+    const blank = makeAssistant([textBlock("   ")]);
+    const a2 = makeAssistant([thinking("T2")]);
+    trackChild(c, a1);
+    trackChild(c, blank);
+    trackChild(c, a2);
+
+    const g = resolveTurnGroup(a2);
+    expect(g?.leader).toBe(a1);
+    expect(g?.members.map((m) => m.comp)).toEqual([a1, a2]);
+  });
+
+  it("should keep a streaming thinking-only message standalone and merge it on completion", () => {
+    const c = new Container();
+    const a1 = makeAssistant([thinking("T1")]);
+    trackChild(c, makeUserMsg());
+    trackChild(c, a1);
+
+    // ストリーミング中 (thinking のみ): 動的状態として a1 のグループに含まれず、
+    // 自メッセージのみのスタンドアロングループ (最下部の単独エントリ) になる
+    const a2 = makeAssistant([thinking("T2")]);
+    (a2 as any).__piCompactStreaming = true;
+    trackChild(c, a2);
+    expect(resolveTurnGroup(a1)?.members.map((m) => m.comp)).toEqual([a1]);
+    const g = resolveTurnGroup(a2);
+    expect(g?.leader).toBe(a2);
+    expect(g?.members.map((m) => m.comp)).toEqual([a2]);
+
+    // 完了 (__piCompactStreaming 解除) → 初めて a1 のグループに合流する
+    (a2 as any).__piCompactStreaming = false;
+    expect(resolveTurnGroup(a1)?.members.map((m) => m.comp)).toEqual([a1, a2]);
+    expect(resolveTurnGroup(a2)?.leader).toBe(a1);
+  });
+
+  it("should keep a streaming text-bearing message standalone through completion (no retroactive count change)", () => {
+    const c = new Container();
+    const a1 = makeAssistant([thinking("T1")]);
+    trackChild(c, makeUserMsg());
+    trackChild(c, a1);
+
+    const a2 = makeAssistant([thinking("T2")]);
+    (a2 as any).__piCompactStreaming = true;
+    trackChild(c, a2);
+    expect(resolveTurnGroup(a1)?.members.map((m) => m.comp)).toEqual([a1]);
+
+    // ストリーミング中に本文が出ても、動的状態のうちは何も変化しない (×N の後戻りがない)
+    (a2 as any).lastMessage = {
+      role: "assistant",
+      content: [thinking("T2"), textBlock("進捗…")],
+      stopReason: "stop",
+    };
+    expect(resolveTurnGroup(a1)?.members.map((m) => m.comp)).toEqual([a1]);
+    expect(resolveTurnGroup(a2)?.leader).toBe(a2);
+
+    // 完了 → 正文付きなので自グループの先頭のまま (立位置は動かない)
+    (a2 as any).__piCompactStreaming = false;
+    expect(resolveTurnGroup(a2)?.leader).toBe(a2);
+    expect(resolveTurnGroup(a2)?.members.map((m) => m.comp)).toEqual([a2]);
+    expect(resolveTurnGroup(a1)?.members.map((m) => m.comp)).toEqual([a1]);
   });
 
   it("should start a new turn at a user message (previous turn excluded)", () => {

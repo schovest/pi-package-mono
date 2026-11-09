@@ -176,17 +176,69 @@ describe("thinkingGrouping — updateContent wiring", () => {
     expect(contentKids(comp).some((c: any) => c instanceof MouseRegion)).toBe(true);
   });
 
-  it("should not insert the widget on non-leader members (text still renders)", () => {
+  it("should insert own widget on a text-bearing member (its thinking leads the new group)", () => {
     loadExtension({ hideThinking: true, thinkingGrouping: true });
 
     const container = new Container();
     const leader = mountAssistant(container, makeMessage([thinking("T1")]));
     const member = mountAssistant(container, makeMessage([thinking("T2"), textBlock("hi")]));
 
-    // 描画はリーダーのみ。メンバーは thinking 除去後の text を普通に描く
-    expect(groupWidgetRegions(member)).toHaveLength(0);
+    // 正文付き member は可視 text で区切られる → 新グループの先頭 (自ウィジェットを持ち、
+    // thinking 除去後の text も普通に描く)
+    expect(groupWidgetRegions(member)).toHaveLength(1);
     expect(contentKids(member).filter((c: any) => c instanceof Markdown)).toHaveLength(1);
-    expect(contentKids(member).some((c: any) => c instanceof MouseRegion)).toBe(false);
+    expect(groupWidgetRegions(leader)).toHaveLength(1);
+
+    // 正文なしのメンバーは従来通りリーダーに集約され、自ウィジェットは持たない
+    const member2 = mountAssistant(container, makeMessage([thinking("T3")]));
+    expect(groupWidgetRegions(member2)).toHaveLength(0);
+    expect(contentKids(member2).some((c: any) => c instanceof MouseRegion)).toBe(false);
+  });
+
+  it("should keep a streaming message's widget standalone and remove it on merge-up (no stray block)", () => {
+    loadExtension({ hideThinking: true, thinkingGrouping: true });
+
+    const container = new Container();
+    const leader = mountAssistant(container, makeMessage([thinking("T1")]));
+
+    // ストリーミング中 (thinking のみ): グループには入らず、自ウィジェットが最下部に立つ
+    const streaming = makeMessage([thinking("T2")]);
+    const member = new AssistantMessageComponent(streaming);
+    container.addChild(member);
+    member.updateContent(streaming, true);
+    expect(groupWidgetRegions(member)).toHaveLength(1);
+    expect(groupWidgetRegions(leader)).toHaveLength(1);
+
+    // 完了 (isStreaming=false) → リーダーのグループへ合流: 自ブロックは丸ごと撤去され
+    // (Spacer 残置による空行もない)、リーダー側のカウントだけが増える
+    member.updateContent(makeMessage([thinking("T2")]), false);
+    expect(groupWidgetRegions(member)).toHaveLength(0);
+    const stray = contentKids(member).filter((c: any) => (c as any)?.__piCompactThinkingGroupBlock === true);
+    expect(stray).toHaveLength(0);
+    expect(groupWidgetRegions(leader)).toHaveLength(1);
+  });
+
+  it("should keep a streaming text-bearing message's own widget through completion (no count churn)", () => {
+    loadExtension({ hideThinking: true, thinkingGrouping: true });
+
+    const container = new Container();
+    const leader = mountAssistant(container, makeMessage([thinking("T1")]));
+
+    // ストリーミング開始 (thinking のみ): 自ウィジェットが既に立つ
+    const member = new AssistantMessageComponent(makeMessage([thinking("T2")]));
+    container.addChild(member);
+    member.updateContent(makeMessage([thinking("T2")]), true);
+    expect(groupWidgetRegions(member)).toHaveLength(1);
+    expect(groupWidgetRegions(leader)).toHaveLength(1);
+
+    // 本文が出ても動的状態のうちは立位置のまま (旧グループのカウントは後戻りしない)
+    member.updateContent(makeMessage([thinking("T2"), textBlock("hi")]), true);
+    expect(groupWidgetRegions(member)).toHaveLength(1);
+    expect(groupWidgetRegions(leader)).toHaveLength(1);
+
+    // 完了 → 正文付きなので自ウィジェットはそのまま (自グループのリーダーであり続ける)
+    member.updateContent(makeMessage([thinking("T2"), textBlock("hi")]), false);
+    expect(groupWidgetRegions(member)).toHaveLength(1);
     expect(groupWidgetRegions(leader)).toHaveLength(1);
   });
 

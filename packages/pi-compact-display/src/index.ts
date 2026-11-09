@@ -69,7 +69,11 @@ export default function (pi: ExtensionAPI) {
   // @ts-ignore
   const originalUpdateContent = AssistantMessageComponent.prototype.updateContent;
   // @ts-ignore
-  AssistantMessageComponent.prototype.updateContent = function (message: any) {
+  AssistantMessageComponent.prototype.updateContent = function (message: any, ...streamingArgs: boolean[]) {
+    // ストリーミング状態の記録 (thinkingGrouping の動的/確定判別用)。
+    // 2 引数呼び出し (host のストリーミング生命周期: true → ... → false) のときだけ更新し、
+    // 1 引数の内部再描画経路 (toggle 再描画 / コンストラクタ) で状態を壊さない。
+    if (streamingArgs.length > 0) (this as any).__piCompactStreaming = streamingArgs[0] === true;
     if (isActive(config)) {
       const hasThinking = (m: any) => Array.isArray(m?.content) && m.content.some((c: any) => c?.type === "thinking");
       // 実効メッセージ: 呼び出し側のメッセージに thinking があればそれを、なければ (ホスト再描画

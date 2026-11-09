@@ -13,9 +13,9 @@ It helps keep your context and screen clean by limiting overly long tool outputs
 - **Per-Tool Configuration**: Set different display modes for each tool.
 - **Summary Display**: Hide execution details and output only a summary like `⚡ read(1) ls(2)` at the top of the assistant's response.
 - **Line Limit & Padding Removal**: Limit the number of output lines and automatically strip empty padding lines.
-- **Grouped Tool Results**: With `grouping` enabled, all `lines`-mode calls in one user turn are combined into a single aggregation line (e.g. `⚡ bash ×3`).
+- **Grouped Tool Results**: With `grouping` enabled, all `lines`-mode calls in one user turn are combined into a single aggregation line (e.g. `⚡ bash ×3`). A visible assistant text output splits the group: later calls start a new card. Running tools (no result yet) stay as standalone cards and fold into the group once they finish.
 - **Suppress Thinking Indicator**: With `hideThinking` enabled, the "Thinking..." indicator (and full thinking blocks) shown for thinking models are hidden from the assistant messages.
-- **Merged Thinking Indicator**: With `thinkingGrouping` enabled (requires `hideThinking`), all thinking of one user turn is merged into a single clickable entry (`Thinking... ×N`); click to expand the merged thinking content.
+- **Merged Thinking Indicator**: With `thinkingGrouping` enabled (requires `hideThinking`), the thinking of one user turn is merged into a single clickable entry (`Thinking... ×N`); click to expand the merged thinking content. A visible assistant text output splits the merge, and the text-bearing message's own thinking starts a new entry. While a message is still streaming, its thinking always shows as its own standalone entry at the bottom; it merges into the previous entry (or stays standalone, if it carries text) only when the message completes, so settled entry counts never move backwards.
 - **Support for External Tools**: Override the display settings not only for Pi's built-in tools but also for any custom tools added by other extensions.
 - **Expandable Details**: Fully supports Pi's native expand feature (e.g., pressing `Ctrl+O` in the TUI), overriding the limits to show the full output.
 
@@ -198,7 +198,7 @@ If you want to remove the vertical empty lines (vertical padding) that appear ab
 
 ### Global Setting: Grouping Tool Results (`grouping`)
 
-`lines`-mode tools normally render one tool card per call. When this is enabled, **all `lines`-mode calls within one user turn are combined into a single card that shows only the aggregation header**, greatly reducing the vertical space used on screen. Even if the assistant splits its work into multiple thinking passes (multiple assistant messages), everything in the same user turn stays in one card.
+`lines`-mode tools normally render one tool card per call. When this is enabled, **all `lines`-mode calls within one user turn are combined into a single card that shows only the aggregation header**, greatly reducing the vertical space used on screen. Even if the assistant splits its work into multiple thinking passes (multiple assistant messages), everything in the same user turn stays in one card — **until it outputs a visible text message**, which ends the group; the thinking and tool calls below it start a new card. In-progress items are kept separate from settled ones: a running tool (no result yet) is rendered as its own standalone card (so you can see what is executing) and only folds into the group when it completes.
 
 **Configuration Example:**
 ```json
@@ -211,7 +211,7 @@ If you want to remove the vertical empty lines (vertical padding) that appear ab
 
 - **`grouping`** (`boolean`): Set to `true` to combine all `lines`-mode calls in one user turn (regardless of tool name) into a single card. The card shows only the count header such as `⚡ bash ×3 edit ×1` (even a single call is shown as `⚡ bash ×1`). Like `"user"`, this setting is not affected by other configurations such as `"default"` and is only applied if explicitly defined. You can exclude specific tools from the group by setting `"grouping": false` in their individual tool configuration.
 - Command lines and outputs are hidden by default; press `Ctrl+O` (expand) to show every call's command line and full, untruncated output for all tools in the group.
-- Calls in different turns (separated by a user message) are rendered as separate cards.
+- Calls in different turns (separated by a user message) are rendered as separate cards. A visible assistant text output (progress report, final answer) splits the group the same way: the calls below it are rendered as a new card.
 
 ### Global Setting: Suppress Thinking Indicator (`hideThinking`)
 
@@ -228,7 +228,7 @@ Thinking-capable models may emit `thinking` content blocks, which Pi renders as 
 
 #### Merged Thinking (`thinkingGrouping`)
 
-Instead of hiding thinking entirely, `thinkingGrouping` keeps **one clickable entry per user turn** that contains all thinking of the turn. Even when the assistant splits its work into multiple assistant messages (multiple thinking passes), everything in the same user turn stays in one entry.
+Instead of hiding thinking entirely, `thinkingGrouping` keeps **one clickable entry per user turn** that contains all thinking of the turn. Even when the assistant splits its work into multiple assistant messages (multiple thinking passes), everything in the same user turn stays in one entry — **until it outputs a visible text message**, which ends the entry; the message carrying that text starts a new entry with its own thinking (placed above its text), and the thinking and tool calls below it are no longer merged into the previous one. A message whose thinking is still streaming always shows its own standalone entry at the bottom; it merges into the previous entry — or starts its own, if it carries text — only when the message completes, so settled entry counts never move backwards (no `×9 → ×8` jumps mid-stream).
 
 **Configuration Example:**
 ```json
@@ -238,7 +238,7 @@ Instead of hiding thinking entirely, `thinkingGrouping` keeps **one clickable en
 }
 ```
 
-- **`thinkingGrouping`** (`boolean`): Set to `true` to render all thinking blocks within one user turn as a single clickable entry, placed where the turn's first thinking block appeared. Only effective when `hideThinking` is also `true` (with `hideThinking` alone, thinking is simply hidden). When collapsed, the entry shows the host's hidden-thinking label (`"Thinking..."` by default) with a count such as `Thinking... ×N` when the turn has two or more thinking runs. Clicking the entry expands all thinking of the turn, rendered in order as a **quote-style block** — each line is prefixed with a `│ ` left border (in the theme's `mdQuoteBorder` color) so the thinking stays clearly distinguishable from the regular assistant text; the text itself is italic Markdown in the `thinkingText` color (falling back to the theme's `mdQuote` color when the theme cannot be detected). Clicking again collapses it. After a session reload the entry is collapsed by default, and Pi's thinking display toggle has no effect while this mode is active. Like `"user"` and `"grouping"`, this setting is not affected by other configurations such as `"default"` and is only applied if explicitly defined. Default is `false`.
+- **`thinkingGrouping`** (`boolean`): Set to `true` to render the thinking blocks within one user turn as a single clickable entry, placed where the turn's first thinking block appeared. Only effective when `hideThinking` is also `true` (with `hideThinking` alone, thinking is simply hidden). When collapsed, the entry shows the host's hidden-thinking label (`"Thinking..."` by default) with a count such as `Thinking... ×N` when the group has two or more thinking runs. Clicking the entry expands all thinking of the group, rendered in order as a **quote-style block** — each line is prefixed with a `│ ` left border (in the theme's `mdQuoteBorder` color) so the thinking stays clearly distinguishable from the regular assistant text; the text itself is italic Markdown in the `thinkingText` color (falling back to the theme's `mdQuote` color when the theme cannot be detected). Clicking again collapses it. After a session reload the entry is collapsed by default, and Pi's thinking display toggle has no effect while this mode is active. Like `"user"` and `"grouping"`, this setting is not affected by other configurations such as `"default"` and is only applied if explicitly defined. Default is `false`.
 
 ---
 

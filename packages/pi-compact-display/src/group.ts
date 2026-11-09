@@ -1,5 +1,5 @@
 import { Box, type Container, Text } from "@earendil-works/pi-tui";
-import { isToolComp, isUserMessage } from "./componentUtils.ts";
+import { isTextBoundary, isToolComp, isUserMessage } from "./componentUtils.ts";
 import { type Config, getEffectiveToolName, resolveToolConfig } from "./config.ts";
 import { colorizeResult, formatCallLine, formatOutput, resolveResultText } from "./renderUtils.ts";
 
@@ -113,18 +113,23 @@ export function resetChildren(container: Container): void {
 // ─────────────────────────────────────────────────────────────
 // グループ走査
 //
-// グループ = 直前のユーザーメッセージ (ターン境界) 以降の lines モード ToolExecutionComponent 全て
-// (thinking / モデル切替で assistant メッセージが複数に分かれても1グループ)。
+// グループ = 直前の境界以降の完了済み (result 到着済み) lines モード
+// ToolExecutionComponent 全て。境界 = ユーザーメッセージ (ターン境界) + 可視 text 付き
+// assistant メッセージ。実行中 (result 未到着) のツールは動的状態として含めず、
+// レンダラ側で単独表示し、完了時に初めてグループへ合流する (動的と確定を区別)。
+// thinking / モデル切替で assistant メッセージが複数に分かれても 1 グループにマージするが、
+// 正常なテキスト出力 (中間報告・最終応答等) でグループを打ち切る。テキスト出力より下の
+// thinking / ツール呼び出しは新しいグループ (計数ヘッダー・行出力とも groupOf 由来)。
 // 先頭メンバー = リーダー。リーダーだけがグループ全体を描画する。
 // ─────────────────────────────────────────────────────────────
 
-// ターン境界 = ユーザーメッセージのみ。
-// thinking やモデル切替のたびに AssistantMessageComponent が追加されても分割しない
-// (pi は 1 ユーザー入力に対し複数の assistant メッセージを生成するため)。
-const isTurnBoundary = isUserMessage;
+const isGroupBoundary = (c: object) => isUserMessage(c) || isTextBoundary(c);
 
 function isGroupMember(c: object, config: Config): boolean {
   if (!isToolComp(c)) return false;
+  // 実行中 (result 未到着) のツールは動的状態: グループに含めず単独表示し、
+  // 完了 (result 到着) 時に初めてグループへ合流する
+  if ((c as any).result == null) return false;
   const anyC = c as any;
   const toolConfig = resolveToolConfig(anyC.toolName, anyC.args, config);
   // ツール個別設定 grouping:false のツールはグループ化から除外して単独表示
@@ -143,17 +148,17 @@ export function groupOf(owner: object, config: Config): any[] {
   const ownerIndex = cs.indexOf(owner);
   if (ownerIndex === -1) return [];
 
-  // 後方: 直前のターン境界まで遡り、グループ先頭メンバー (start) を探す
+  // 後方: 直前の境界まで遡り、グループ先頭メンバー (start) を探す
   let start = ownerIndex;
   for (let i = ownerIndex - 1; i >= 0; i--) {
-    if (isTurnBoundary(cs[i])) break;
+    if (isGroupBoundary(cs[i])) break;
     if (isGroupMember(cs[i], config)) start = i;
   }
 
-  // 前方: 次のターン境界まで全メンバーを収集
+  // 前方: 次の境界まで全メンバーを収集
   const members: any[] = [];
   for (let i = start; i < cs.length; i++) {
-    if (isTurnBoundary(cs[i])) break;
+    if (isGroupBoundary(cs[i])) break;
     if (isGroupMember(cs[i], config)) members.push(cs[i]);
   }
   return members;
@@ -163,7 +168,7 @@ export function groupOf(owner: object, config: Config): any[] {
 // GroupContent コンポーネント
 //
 // リーダーの call renderer が返す動的コンポーネント。毎フレーム render(width) が呼ばれ、
-// その時点のミラーとメンバー状態 (result / isPartial / expanded) を生で読んで
+// その時点のミラーとメンバー状態 (result / expanded) を生で読んで
 // グループ全体を1つのボックスに描画する。
 // ─────────────────────────────────────────────────────────────
 
@@ -189,8 +194,8 @@ export class GroupContent {
 
   private currentBgName(): string {
     const members = groupOf(this.owner, this.config);
+    // メンバーは完了済み (result 到着済み) のみ: 実行中は単独表示されるため pending にならない
     if (members.length === 0) return "toolSuccessBg";
-    if (members.some((m) => m.isPartial)) return "toolPendingBg";
     if (members.some((m) => m.result?.isError)) return "toolErrorBg";
     return "toolSuccessBg";
   }

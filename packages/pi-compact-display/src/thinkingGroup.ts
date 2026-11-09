@@ -1,17 +1,30 @@
 import { getMarkdownTheme } from "@earendil-works/pi-coding-agent";
 import { Markdown, MouseRegion, Spacer, Text } from "@earendil-works/pi-tui";
-import { isAssistantMessage, isUserMessage } from "./componentUtils.ts";
+import { isAssistantMessage, isTextBoundary, isUserMessage, readOriginalMessage } from "./componentUtils.ts";
 import type { Config } from "./config.ts";
 import { getContainerChildren } from "./group.ts";
+
+// 元メッセージ読み取りは componentUtils.ts に移動 (API 互換のため再export)。
+export { readOriginalMessage };
 
 // ─────────────────────────────────────────────────────────────
 // thinking 折りたたみ集約 (thinkingGrouping)
 //
-// hideThinking + thinkingGrouping 両方が有効なとき、ターン内の全 assistant メッセージの
-// thinking ブロックを 1 つの折りたたみエントリにまとめる。このモジュールは走査・集計のみ
-// (描画ウィジェットは後段で追加)。ターン境界は group.ts と同じくユーザーメッセージで、
-// thinking / モデル切替で assistant メッセージが複数に分かれても 1 ターンとして扱う。
+// hideThinking + thinkingGrouping 両方が有効なとき、ターン内の thinking ブロックを
+// 折りたたみエントリにまとめる。このモジュールは走査・集計のみ (描画ウィジェットは後段)。
+// グループの区切りは group.ts と同じく、ユーザーメッセージに加えて可視 text 付き
+// assistant メッセージ。thinking / モデル切替で assistant メッセージが複数に分かっても、
+// 正文出力がない限り 1 グループにマージする。正文付きメッセージ自身は新グループの
+// 先頭になり (その thinking は自メッセージの正文より上に描かれる)、それより下の
+// thinking / ツール呼び出しとはマージされない。
+//
+// 動的と確定の区別: ストリーミング中 (__piCompactStreaming) のメッセージは未確定として
+// 常に最下部に単独エントリで表示し、完了時に初めて先行グループへの合流 /
+// 正文による新グループ開始が決まる (確定済みグループのカウントは後戻りしない)。
 // ─────────────────────────────────────────────────────────────
+
+/** ストリーミング中 (updateContent に isStreaming=true で呼ばれた) assistant メッセージか。 */
+const isStreamingAssistant = (c: object) => isAssistantMessage(c) && (c as any).__piCompactStreaming === true;
 
 /** グループメンバー = thinking を持つ assistant メッセージ 1 件分。 */
 export interface ThinkingTurnMember {
@@ -44,16 +57,7 @@ export function extractThinkingTexts(message: any): string[] {
 }
 
 /**
- * コンポーネントの元メッセージを返す。
- * updateContent パッチが thinking 除去前に退避した元メッセージ
- * (__piCompactOriginalMessage) を優先し、なければ宿主が保持する lastMessage。
- */
-export function readOriginalMessage(comp: any): any {
-  return comp.__piCompactOriginalMessage ?? comp.lastMessage;
-}
-
-/**
- * owner が属するターンの thinking グループを解決する。
+ * owner が属するグループ (区切り間のセグメント) の thinking グループを解決する。
  * ミラー未登録 / owner がツリー外 / thinking を持つメンバー不在なら undefined。
  * leader = 先頭メンバー、totalRuns = 全メンバーの texts.length 合計。
  */
@@ -63,21 +67,44 @@ export function resolveTurnGroup(owner: object): ThinkingTurnGroup | undefined {
   const ownerIndex = cs.indexOf(owner);
   if (ownerIndex === -1) return undefined;
 
-  // 後方: 直前のユーザーメッセージ (境界, 除外) の直後までがターン先頭
+  // ストリーミング中の owner は動的状態: 未確定として常に自メッセージのみの
+  // スタンドアロングループを返す (最下部の単独エントリ)。
+  if (isStreamingAssistant(owner)) {
+    const texts = extractThinkingTexts(readOriginalMessage(owner));
+    if (texts.length === 0) return undefined;
+    return { leader: owner, members: [{ comp: owner, texts }], totalRuns: texts.length };
+  }
+
+  // 後方: 直前の境界まで遡る。ユーザーメッセージ (ターン境界, 除外) の直後、
+  // ストリーミング中メッセージ (動的, 除外) の直後、または可視 text 付き assistant
+  // メッセージ自身 (新グループの先頭に含める) がセグメント先頭。
   let turnStart = 0;
-  for (let i = ownerIndex - 1; i >= 0; i--) {
+  for (let i = ownerIndex; i >= 0; i--) {
     if (isUserMessage(cs[i])) {
       turnStart = i + 1;
       break;
     }
+    if (isStreamingAssistant(cs[i])) {
+      turnStart = i + 1;
+      break;
+    }
+    if (isTextBoundary(cs[i])) {
+      turnStart = i;
+      break;
+    }
   }
 
-  // 前方: 次のユーザーメッセージ (境界, 除外) までの thinking 持ち assistant を収集
+  // 前方: 次の境界までの完了済み thinking 持ち assistant を収集。
+  // ストリーミング中メッセージは動的状態として含めない (完了時に合流判定)。
+  // 可視 text 付き assistant はセグメント先頭 (i === turnStart) だけメンバーになり
+  // (その thinking は自メッセージの正文より上に描かれる)、それ以降は次グループの
+  // 先頭なので収集を打ち切る。
   const members: ThinkingTurnMember[] = [];
   for (let i = turnStart; i < cs.length; i++) {
-    if (isUserMessage(cs[i])) break;
     const c = cs[i] as any;
+    if (isUserMessage(c) || isStreamingAssistant(c)) break;
     if (!isAssistantMessage(c)) continue;
+    if (i !== turnStart && isTextBoundary(c)) break;
     const texts = extractThinkingTexts(readOriginalMessage(c));
     if (texts.length > 0) members.push({ comp: c, texts });
   }
@@ -252,16 +279,33 @@ class ThinkingGroupWidget {
 const WIDGET_BLOCK_MARKER = "__piCompactThinkingGroupBlock";
 
 /**
+ * comp の contentContainer から自ブロック (WIDGET_BLOCK_MARKER 印付き) を撤去する。
+ * ミラーは addChild 経由でしか観測しないため、直接 splice による撤去はミラーに影響しない。
+ */
+function removeWidgetBlock(comp: any): void {
+  const children = comp.contentContainer?.children;
+  if (!Array.isArray(children)) return;
+  for (let i = children.length - 1; i >= 0; i--) {
+    if ((children[i] as any)?.[WIDGET_BLOCK_MARKER] === true) children.splice(i, 1);
+  }
+}
+
+/**
  * リーダーコンポーネントの contentContainer に折りたたみエントリを挿入する。
  * 挿入位置は元メッセージ内の最初の thinking ブロック位置から計算する
  * (上流は thinking 除去後に [前導 Spacer, ...可視 text] のみ描くため)。
  * thinking なし / グループなし / 非リーダーは no-op。
- * 冪等: 挿入前に前回の自ブロック (WIDGET_BLOCK_MARKER 印付き) を撤去するため、
- * updateContent の再構築を伴わない重複呼び出し (ネストしたパッチ、customAddChild の
- * 追い挿入との競合) でもリーダーには常に 1 ブロックしか残らない。
+ * 冪等: 常に自ブロックを先に撤去してから、リーダー時のみ再挿入する。ストリーミング中は
+ * 動的状態として自ウィジェットが最下部に立ち、完了時に非リーダーへ降格する経路があるため、
+ * 降格後も自ブロックを残すと撤去済みウィジェットの分だけ Spacer が残って空行になる。
+ * 「撤去は無条件、再挿入はリーダー時のみ」が不変条件。これによりネストしたパッチ
+ * (拡張ファクトリの同プロセス再実行、pi-subagents 子 session の ambient 再ロード) でも
+ * リーダーには常に 1 ブロックしか残らない (生成直後の未 track は no-op、リプレイは
+ * customAddChild 側の追い挿入で補う)。
  */
 export function appendGroupWidget(comp: any): void {
   const message = readOriginalMessage(comp);
+  removeWidgetBlock(comp);
   if (extractThinkingTexts(message).length === 0) return;
   const group = resolveTurnGroup(comp);
   if (!group || group.leader !== comp) return;
@@ -290,11 +334,6 @@ export function appendGroupWidget(comp: any): void {
 
   const children = comp.contentContainer?.children;
   if (!Array.isArray(children)) return;
-  // 冪等化: 前回挿入の自ブロックを撤去してから挿入する。ミラーは addChild 経由でしか
-  // 観測しないため、直接 splice による撤去・挿入はミラーに影響しない。
-  for (let i = children.length - 1; i >= 0; i--) {
-    if ((children[i] as any)?.[WIDGET_BLOCK_MARKER] === true) children.splice(i, 1);
-  }
   for (const child of block) {
     (child as any)[WIDGET_BLOCK_MARKER] = true;
   }

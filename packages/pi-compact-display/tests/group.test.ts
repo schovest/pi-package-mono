@@ -14,14 +14,15 @@ function makeConfig(json: any) {
   return loadConfig("/test/config.json");
 }
 
-/** Fake ToolExecutionComponent (constructor.name ベース判定のため名前を一致させる) */
+/** Fake ToolExecutionComponent (constructor.name ベース判定のため名前を一致させる)。
+ * 既定で result を持つ (完了済み)。実行中のフィクスチャは result: undefined を明示する。 */
 function makeTool(name: string, args: any, extra: any = {}) {
   return {
     constructor: { name: "ToolExecutionComponent" },
     toolName: name,
     rendererState: {},
     args,
-    result: undefined,
+    result: resultOf("out"),
     isPartial: false,
     expanded: false,
     ...extra,
@@ -115,6 +116,60 @@ describe("groupOf", () => {
     const t2 = makeTool("bash", { command: "echo b" });
     trackChild(c, t1);
     trackChild(c, assistantMsg);
+    trackChild(c, t2);
+    expect(groupOf(t1, config)).toEqual([t1, t2]);
+    expect(groupOf(t2, config)).toEqual([t1, t2]);
+  });
+
+  it("should break the group at an assistant message with visible text output", () => {
+    const config = makeConfig({ grouping: true, bash: { mode: "lines" } });
+    const c = new Container();
+    const t1 = makeTool("bash", { command: "echo a" });
+    const t2 = makeTool("bash", { command: "echo b" });
+    const textAssistant = {
+      constructor: { name: "AssistantMessageComponent" },
+      lastMessage: { role: "assistant", content: [{ type: "text", text: "途中経過" }] },
+    };
+    const t3 = makeTool("bash", { command: "echo c" });
+    trackChild(c, t1);
+    trackChild(c, t2);
+    trackChild(c, textAssistant);
+    trackChild(c, t3);
+    // 正常なテキスト出力でグループを打ち切り、以降のツール呼び出しは新グループ
+    // (計数モード・行出力モードとも groupOf 由来なので同一の分離になる)
+    expect(groupOf(t1, config)).toEqual([t1, t2]);
+    expect(groupOf(t2, config)).toEqual([t1, t2]);
+    expect(groupOf(t3, config)).toEqual([t3]);
+  });
+
+  it("should break the group before the text assistant's own tool calls (same message)", () => {
+    // M = [text, tool_use] のとき、そのツールは正文より下なので新グループになる
+    const config = makeConfig({ grouping: true, bash: { mode: "lines" } });
+    const c = new Container();
+    const t1 = makeTool("bash", { command: "echo a" });
+    const textAssistant = {
+      constructor: { name: "AssistantMessageComponent" },
+      lastMessage: { role: "assistant", content: [{ type: "text", text: "調べます" }] },
+    };
+    const t2 = makeTool("bash", { command: "echo b" });
+    trackChild(c, t1);
+    trackChild(c, textAssistant);
+    trackChild(c, t2);
+    expect(groupOf(t1, config)).toEqual([t1]);
+    expect(groupOf(t2, config)).toEqual([t2]);
+  });
+
+  it("should NOT break the group at whitespace-only assistant text", () => {
+    const config = makeConfig({ grouping: true, bash: { mode: "lines" } });
+    const c = new Container();
+    const t1 = makeTool("bash", { command: "echo a" });
+    const blankAssistant = {
+      constructor: { name: "AssistantMessageComponent" },
+      lastMessage: { role: "assistant", content: [{ type: "text", text: "   " }] },
+    };
+    const t2 = makeTool("bash", { command: "echo b" });
+    trackChild(c, t1);
+    trackChild(c, blankAssistant);
     trackChild(c, t2);
     expect(groupOf(t1, config)).toEqual([t1, t2]);
     expect(groupOf(t2, config)).toEqual([t1, t2]);
@@ -301,15 +356,22 @@ describe("GroupContent", () => {
     expect(text).toContain("toolErrorBg");
   });
 
-  it("should use pending background while any member is partial", () => {
+  it("should exclude a running (result-less) tool from the group until it completes", () => {
     const config = makeConfig({ grouping: true, bash: { mode: "lines" } });
     const c = new Container();
-    const t1 = makeTool("bash", { command: "a" }, { isPartial: true, result: undefined });
+    const t1 = makeTool("bash", { command: "a" });
+    const t2 = makeTool("bash", { command: "b" }, { isPartial: true, result: undefined });
     trackChild(c, t1);
+    trackChild(c, t2);
 
-    const gc = new GroupContent(t1, config, theme);
-    const text = gc.render(60).join("\n");
-    expect(text).toContain("toolPendingBg");
+    // 実行中 (result 未到着) は動的状態としてグループに含めず、単独表示のままにする
+    expect(groupOf(t1, config)).toEqual([t1]);
+    expect(groupOf(t2, config)).not.toContain(t2);
+
+    // 完了 (result 到着) すると初めてグループに合流する
+    (t2 as any).result = resultOf("B");
+    expect(groupOf(t1, config)).toEqual([t1, t2]);
+    expect(groupOf(t2, config)).toEqual([t1, t2]);
   });
 
   it("should expand all members (call lines + full output) when the leader is expanded", () => {

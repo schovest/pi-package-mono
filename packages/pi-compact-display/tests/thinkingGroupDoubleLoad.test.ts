@@ -133,7 +133,7 @@ describe("extension factory re-execution (nested updateContent patch)", () => {
     expect(visibleThinkingLines(chat)).toHaveLength(1);
   });
 
-  it("should render a single Thinking entry per turn across a tool-use turn after double load", () => {
+  it("should render a single Thinking entry per group across a tool-use turn after double load", () => {
     initTheme("dark");
     loadExtension(STREAM_CONFIG);
     loadExtension(STREAM_CONFIG);
@@ -141,7 +141,8 @@ describe("extension factory re-execution (nested updateContent patch)", () => {
     const chat = new Container();
     chat.addChild({ constructor: { name: "UserMessageComponent" } } as any);
 
-    // assistant A (toolUse で終端) → tool → assistant B (同一ターン)
+    // assistant A (toolUse で終端, 正文あり = 境界) → tool → assistant B (正文あり = 境界)
+    // 正文付き A/B は互いにマージされず、各々が新グループの先頭になる
     const a = new AssistantMessageComponent(undefined, true, getMarkdownTheme(), "Thinking...", 1, []);
     chat.addChild(a as any);
     a.updateContent(msg([th("A think"), tx("calling tool")]), false);
@@ -152,9 +153,9 @@ describe("extension factory re-execution (nested updateContent patch)", () => {
     chat.addChild(b as any);
     b.updateContent(msg([th("B think 1"), th("B think 2"), tx("done")]), false);
 
-    // リーダー (A) にのみウィジェット。B は非リーダーで空描画。
+    // 二重ロード (ネストパッチ) でも各リーダーに 1 個ずつ (2 個積み上がらない)
     expect(widgetCount(a)).toBe(1);
-    expect(widgetCount(b)).toBe(0);
-    expect(visibleThinkingLines(chat)).toHaveLength(1);
+    expect(widgetCount(b)).toBe(1);
+    expect(visibleThinkingLines(chat)).toHaveLength(2);
   });
 });

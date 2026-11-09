@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { type Config, resolveToolConfig } from "./config.ts";
-import { GroupContent, getGroupOwner } from "./group.ts";
+import { GroupContent, getGroupOwner, groupOf } from "./group.ts";
 import { colorizeResult, formatCallLine, formatOutput, resolveResultText } from "./renderUtils.ts";
 import { ZERO, wrapWithBox } from "./uiUtils.ts";
 
@@ -39,6 +39,8 @@ export function registerToolRenderers(pi: ExtensionAPI, config: Config) {
           render(width) {
             const owner = getGroupOwner(context.state);
             if (!owner) return callBox.render(width);
+            // グループ未加盟 (実行中など) は動的状態として単独表示。加盟時はリーダーのみが描く
+            if (!groupOf(owner, config).includes(owner)) return callBox.render(width);
             group ??= new GroupContent(owner, config, theme);
             return group.render(width);
           },

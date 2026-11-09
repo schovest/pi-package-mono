@@ -1,5 +1,5 @@
 import fs from "fs";
-import { initTheme, renderDiff } from "@earendil-works/pi-coding-agent";
+import { AssistantMessageComponent, initTheme, renderDiff } from "@earendil-works/pi-coding-agent";
 import { Container } from "@earendil-works/pi-tui";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../src/config.ts";
@@ -59,6 +59,46 @@ describe("Grouping integration (registered renderers)", () => {
       expect(text).toContain("⚡ bash ×1");
       expect(text).not.toContain("$ echo");
     }
+  });
+
+  it("should split groups at an assistant message with visible text", () => {
+    const c = new Container();
+    const a = makeComponent("bash", "1", { command: "echo a" });
+    const b = makeComponent("bash", "2", { command: "echo b" });
+    a.updateResult(result("A"));
+    b.updateResult(result("B"));
+    c.addChild(a);
+    c.addChild(
+      new AssistantMessageComponent({
+        role: "assistant",
+        content: [{ type: "text", text: "途中経過" }],
+        stopReason: "toolUse",
+      } as any),
+    );
+    c.addChild(b);
+    // テキスト出力でグループが分離する: 前後とも単独カウント (×2 にならない)
+    expect(a.render(80).join("\n")).toContain("⚡ bash ×1");
+    expect(b.render(80).join("\n")).toContain("⚡ bash ×1");
+  });
+
+  it("should keep a running tool standalone and fold it into the group on completion", () => {
+    const c = new Container();
+    const a = makeComponent("bash", "1", { command: "echo a" });
+    const b = makeComponent("bash", "2", { command: "echo b" });
+    a.updateResult(result("A"));
+    c.addChild(a);
+    c.addChild(b); // b は実行中 (result 未到着)
+
+    // 実行中の b は動的状態として単独カード ($ コマンド行が見える)、a のカウントに含まれない
+    expect(a.render(80).join("\n")).toContain("⚡ bash ×1");
+    const running = b.render(80).join("\n");
+    expect(running).toContain("$ echo b");
+    expect(running).not.toContain("⚡");
+
+    // 完了 → 初めてグループに合流し、b のカードはリーダーに折り畳まれる
+    b.updateResult(result("B"));
+    expect(a.render(80).join("\n")).toContain("⚡ bash ×2");
+    expect(b.render(80).join("\n")).toBe("");
   });
 
   it("should clear the tracking marker and not track when addChild throws (Q2)", () => {
