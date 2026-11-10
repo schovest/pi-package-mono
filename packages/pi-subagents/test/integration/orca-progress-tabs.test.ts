@@ -7,6 +7,7 @@ import * as path from "node:path";
 import { afterEach, describe, it } from "vitest";
 import { TEMP_ROOT_DIR } from "../../src/shared/types.ts";
 import { writeNodeCommand } from "../support/node-command.ts";
+import { removeDirSyncSafe } from "../support/safe-rm.ts";
 
 const tempDirs: string[] = [];
 afterEach(() => {
@@ -20,14 +21,14 @@ afterEach(() => {
     }
     const key = createHash("sha256").update(scope).digest("hex").slice(0, 20);
     fs.rmSync(path.join(progressDir, `counter-${key}`), { force: true });
-    fs.rmSync(path.join(progressDir, `counter-${key}.lock`), { recursive: true, force: true });
+    removeDirSyncSafe(path.join(progressDir, `counter-${key}.lock`));
     if (fs.existsSync(progressDir)) {
       for (const name of fs.readdirSync(progressDir)) {
         if (name.startsWith(`create-${key}-`) && (name.endsWith(".ready") || name.endsWith(".pending")))
           fs.rmSync(path.join(progressDir, name), { force: true });
       }
     }
-    fs.rmSync(dir, { recursive: true, force: true });
+    removeDirSyncSafe(dir);
   }
   if (fs.existsSync(progressDir)) {
     for (const name of fs.readdirSync(progressDir)) {

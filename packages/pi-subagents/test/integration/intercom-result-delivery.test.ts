@@ -40,6 +40,7 @@ import {
   removeTempDir,
   tryImport,
 } from "../support/helpers.ts";
+import { removeDirSyncSafe } from "../support/safe-rm.ts";
 
 interface ExecutorResult {
   content: Array<{ text?: string }>;
@@ -148,7 +149,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
   afterEach(() => {
     delete (globalThis as Record<PropertyKey, unknown>)[Symbol.for(EXTERNAL_JOB_PROVIDER_REGISTRY_KEY)];
     removeTempDir(tempDir);
-    for (const directory of budgetDirectories.splice(0)) fs.rmSync(directory, { recursive: true, force: true });
+    for (const directory of budgetDirectories.splice(0)) removeDirSyncSafe(directory);
   });
 
   async function readMockCallArgs(index: number): Promise<string[]> {
@@ -454,8 +455,8 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       // Awaiting may consume a pending result before the runner promotes its public file.
       assert.equal(mockPi.callCount(), 2, "each retained follow-up must execute once without replay or extra children");
     } finally {
-      fs.rmSync(sourceAsyncDir, { recursive: true, force: true });
-      for (const id of revivedIds) fs.rmSync(path.join(ASYNC_DIR, id), { recursive: true, force: true });
+      removeDirSyncSafe(sourceAsyncDir);
+      for (const id of revivedIds) removeDirSyncSafe(path.join(ASYNC_DIR, id));
     }
   });
 
@@ -649,7 +650,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
         false,
       );
     } finally {
-      fs.rmSync(asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(asyncDir);
     }
   });
 
@@ -776,8 +777,8 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       assert.equal(status.steps?.[0]?.externalJob?.requestDigest, requestDigest);
       assert.equal(status.steps?.[0]?.externalJob?.providerJobId, "job-child");
     } finally {
-      fs.rmSync(sourceAsyncDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
-      fs.rmSync(continuationAsyncDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(sourceAsyncDir);
+      removeDirSyncSafe(continuationAsyncDir);
       fs.rmSync(path.join(RESULTS_DIR, `${expectedRunId}.json`), { force: true });
     }
   });
@@ -888,8 +889,8 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       assert.equal(status.steps?.[0]?.externalJob?.sourceStepIndex, 1);
       assert.equal(status.steps?.[0]?.externalJob?.parentProviderJobId, "job-second");
     } finally {
-      fs.rmSync(sourceAsyncDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
-      fs.rmSync(continuationAsyncDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(sourceAsyncDir);
+      removeDirSyncSafe(continuationAsyncDir);
       fs.rmSync(path.join(RESULTS_DIR, `${expectedRunId}.json`), { force: true });
     }
   });
@@ -977,7 +978,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
           false,
         );
       } finally {
-        fs.rmSync(sourceAsyncDir, { recursive: true, force: true });
+        removeDirSyncSafe(sourceAsyncDir);
       }
     }
   });
@@ -1023,7 +1024,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
         assert.match(result.content[0]?.text ?? "", /not found in the active session/);
         assert.equal(mockPi.callCount(), 0);
       } finally {
-        fs.rmSync(asyncDir, { recursive: true, force: true });
+        removeDirSyncSafe(asyncDir);
       }
     }
   });
@@ -1245,7 +1246,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       assert.match(attachedStatus.steps?.[0]?.label ?? "", /Attached resume-chain-root-/);
       await waitForFile(path.join(RESULTS_DIR, `${attachedId}.json`));
     } finally {
-      fs.rmSync(sourceAsyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(sourceAsyncDir);
       fs.rmSync(sourceResultPath, { force: true });
     }
   });
@@ -1379,7 +1380,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       assert.match(attached.details.asyncId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
       await waitForFile(path.join(RESULTS_DIR, `${attached.details.asyncId}.json`));
     } finally {
-      fs.rmSync(sourceAsyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(sourceAsyncDir);
       fs.rmSync(sourceResultPath, { force: true });
       fs.rmSync(path.join(ACTIVE_ASYNC_CAPACITY_DIR, activeAsyncCapacitySessionKey(parentSessionId)), {
         recursive: true,
@@ -1465,7 +1466,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
         assert.equal(args[args.indexOf("--session") + 1], secondSession);
         assert.equal(args[args.indexOf("--model") + 1], "anthropic/claude-sonnet-4:high");
       } finally {
-        fs.rmSync(asyncDir, { recursive: true, force: true });
+        removeDirSyncSafe(asyncDir);
       }
     });
 
@@ -1528,7 +1529,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
     } finally {
-      fs.rmSync(asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(asyncDir);
     }
   });
 
@@ -1596,7 +1597,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
     } finally {
       // revived runner 在 status complete 后仍可能短暂收尾写盘；5×20ms 的重试窗不够，
       // rmSync 遍历-删除间隙撞 ENOTEMPTY 会把已通过的用例误报为失败。放宽到 ~5s 线性退避。
-      fs.rmSync(asyncDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 25 });
+      removeDirSyncSafe(asyncDir);
       if (revivedId)
         fs.rmSync(path.join(ASYNC_DIR, revivedId), {
           recursive: true,
@@ -1664,7 +1665,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       assert.equal(args.includes("--append-system-prompt"), false);
       await waitForFile(path.join(RESULTS_DIR, `${revivedId}.json`));
     } finally {
-      fs.rmSync(asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(asyncDir);
     }
   });
 
@@ -1741,7 +1742,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       await waitForFile(path.join(RESULTS_DIR, `${afterRelease.details.asyncId}.json`));
     } finally {
       fs.writeFileSync(releasePath, "release", "utf-8");
-      fs.rmSync(sourceAsyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(sourceAsyncDir);
     }
   });
 
@@ -1820,9 +1821,9 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
         competingLease.release();
       }
     } finally {
-      fs.rmSync(sourceAsyncDir, { recursive: true, force: true });
-      if (workflowRunId) fs.rmSync(path.join(ASYNC_DIR, workflowRunId), { recursive: true, force: true });
-      if (revivedRunId) fs.rmSync(path.join(ASYNC_DIR, revivedRunId), { recursive: true, force: true });
+      removeDirSyncSafe(sourceAsyncDir);
+      if (workflowRunId) removeDirSyncSafe(path.join(ASYNC_DIR, workflowRunId));
+      if (revivedRunId) removeDirSyncSafe(path.join(ASYNC_DIR, revivedRunId));
       fs.rmSync(path.join(ACTIVE_ASYNC_CAPACITY_DIR, activeAsyncCapacitySessionKey(parentSessionId)), {
         recursive: true,
         force: true,
@@ -1977,7 +1978,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
     } finally {
       competingLease.release();
       getActiveAsyncCapacitySnapshot(parentSessionId, 1);
-      fs.rmSync(sourceAsyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(sourceAsyncDir);
     }
   });
 
@@ -2445,7 +2446,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       assert.match(result.content[0]?.text ?? "", /Foreground run '.+' child 0 does not have a persisted session file/);
       assert.equal(mockPi.callCount(), 0);
     } finally {
-      fs.rmSync(asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(asyncDir);
     }
   });
 
@@ -2496,7 +2497,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       assert.match(result.content[0]?.text ?? "", /Async run '.+' child 0 does not have a persisted session file/);
       assert.equal(mockPi.callCount(), 0);
     } finally {
-      fs.rmSync(asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(asyncDir);
     }
   });
 
@@ -2556,8 +2557,8 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       assert.equal(result.isError, true);
       assert.match(result.content[0]?.text ?? "", /Ambiguous subagent run id prefix/);
     } finally {
-      fs.rmSync(firstAsyncDir, { recursive: true, force: true });
-      fs.rmSync(secondAsyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(firstAsyncDir);
+      removeDirSyncSafe(secondAsyncDir);
     }
   });
 
@@ -2611,7 +2612,7 @@ describe("intercom result delivery cutover", { skip: !available ? "executor not 
       assert.equal(result.isError, true);
       assert.match(result.content[0]?.text ?? "", /ambiguous between foreground run/);
     } finally {
-      fs.rmSync(asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(asyncDir);
     }
   });
 

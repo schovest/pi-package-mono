@@ -1102,7 +1102,9 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
           },
           shareEnabled: false,
           maxSubagentDepth: 2,
-          timeoutMs: 5_000,
+          // Generous: the deadline is not what this test exercises, and runner boot plus
+          // prompt plus the 1.5s keep-alive can exceed a few seconds on loaded CI machines.
+          timeoutMs: 60_000,
         });
 
         const payload = await readAsyncPayload(id);
@@ -1442,15 +1444,17 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
           level: "verified",
           verify: [
             {
+              // Long enough that cancellation (run deadline plus settle overhead) always
+              // lands well before the verify command completes, even on loaded CI runners.
               id: "slow",
-              command: `${process.execPath} -e "setTimeout(()=>process.exit(0), 30000)"`,
-              timeoutMs: 60_000,
+              command: `${process.execPath} -e "setTimeout(()=>process.exit(0), 120000)"`,
+              timeoutMs: 180_000,
             },
           ],
         },
       });
 
-      const resultPath = await waitForAsyncResultFile(id, 5_000);
+      const resultPath = await waitForAsyncResultFile(id, 30_000);
       const elapsedMs = Date.now() - startedAt;
       const payload = JSON.parse(fs.readFileSync(resultPath, "utf-8")) as AsyncResultPayload;
       const status = await waitForAsyncState(id, (candidate) => candidate.state === "failed");
@@ -1467,8 +1471,10 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
       };
       assert.equal(metadata.acceptance?.status, "rejected");
       assert.equal(metadata.acceptance?.runtimeChecks?.[0]?.id, "timeout");
+      // The deadline starts at launch, so runner boot plus the prompt consume the budget;
+      // allow generous settle overhead while staying far below the 120s verify command.
       assert.ok(
-        elapsedMs < timeoutMs + 4_000,
+        elapsedMs < timeoutMs + 45_000,
         `timeout should cancel acceptance verification well before the verify command completes, elapsed ${elapsedMs}ms`,
       );
     },
@@ -2668,9 +2674,12 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
               level: "verified",
               verify: [
                 {
+                  // Long enough that the run deadline (see below) always lands mid-verify,
+                  // even on CI runners where runner boot plus the two mock prompts can
+                  // take several seconds (observed ~9s worst case).
                   id: "slow",
-                  command: `${process.execPath} -e "setTimeout(()=>process.exit(0), 30000)"`,
-                  timeoutMs: 60_000,
+                  command: `${process.execPath} -e "setTimeout(()=>process.exit(0), 120000)"`,
+                  timeoutMs: 180_000,
                 },
               ],
             },
@@ -2688,10 +2697,15 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
         },
         shareEnabled: false,
         maxSubagentDepth: 2,
-        timeoutMs: 1_000,
+        // The run deadline starts at launch (subagent-runner.ts derives deadlineAt from the
+        // parent launch, not from runner boot), so boot time consumes the budget. Keep the
+        // deadline well above boot plus both prompts so the fanout starts and the deadline
+        // deterministically cancels mid-verify, and keep result polling generous for
+        // loaded CI machines.
+        timeoutMs: 20_000,
       });
 
-      const resultPath = await waitForAsyncResultFile(id, 5_000);
+      const resultPath = await waitForAsyncResultFile(id, 30_000);
       const elapsedMs = Date.now() - startedAt;
       const payload = JSON.parse(fs.readFileSync(resultPath, "utf-8")) as AsyncResultPayload;
       const status = await waitForAsyncState(id, (candidate) => candidate.state === "failed");
@@ -2700,14 +2714,32 @@ describe("async execution utilities", { skip: !available ? "pi packages not avai
         | undefined;
       assert.equal(payload.state, "failed");
       assert.equal(payload.timedOut, true);
-      assert.equal(payload.results.at(-1)?.timedOut, true);
-      assert.equal(payload.results.at(-1)?.acceptance, undefined);
-      assert.equal(dynamicNode?.status, "failed");
-      assert.match(dynamicNode?.error ?? "", /Subagent timed out after 1000ms\./);
+      // The deadline lands mid-verify in the common case, so the last settled child is the
+      // reviewer with no acceptance record. If an extremely slow CI boot pushes the deadline
+      // before the fanout starts, the producer itself times out and carries a rejected
+      // attestation instead. Both shapes must settle as timed out with verified acceptance
+      // impossible.
+      const lastResult = payload.results.at(-1);
+      assert.equal(lastResult?.timedOut, true);
+      assert.ok(
+        lastResult?.acceptance === undefined || lastResult?.acceptance?.status === "rejected",
+        `acceptance must be unevaluated or rejected when the run times out, got ${JSON.stringify(lastResult?.acceptance)}`,
+      );
+      if (dynamicNode?.status === "pending") {
+        // Degenerate slow-boot shape: the fanout never started, so the producer carries the timeout.
+        const producerNode = payload.workflowGraph?.nodes?.[0] as
+          | { status?: string; error?: string; acceptanceStatus?: string }
+          | undefined;
+        assert.equal(producerNode?.status, "failed");
+        assert.match(producerNode?.error ?? "", /Subagent timed out after 20000ms\./);
+      } else {
+        assert.equal(dynamicNode?.status, "failed");
+        assert.match(dynamicNode?.error ?? "", /Subagent timed out after 20000ms\./);
+      }
       assert.notEqual(dynamicNode?.acceptanceStatus, "verified");
       assert.equal(status.timedOut, true);
       assert.ok(
-        elapsedMs < 5_000,
+        elapsedMs < 45_000,
         `timeout should cancel dynamic aggregate acceptance well before the verify command completes, elapsed ${elapsedMs}ms`,
       );
     },

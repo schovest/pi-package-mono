@@ -965,7 +965,9 @@ function makeAsyncExecutor(
 }
 
 async function readAsyncPayload(id: string): Promise<AsyncResultPayload> {
-  const resultPath = await waitForAsyncResultFile(id, 10_000);
+  // 30s: pure wait headroom (polls exit early on success); runner boot plus settle can
+  // take several seconds on loaded CI machines.
+  const resultPath = await waitForAsyncResultFile(id, 30_000);
   return JSON.parse(fs.readFileSync(resultPath, "utf-8")) as AsyncResultPayload;
 }
 

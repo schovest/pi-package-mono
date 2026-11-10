@@ -73,6 +73,7 @@ import { toSubagentDelegationExecutionParams } from "../../src/slash/delegation-
 import { CHILD_WATCHDOG_STATUS_EVENT } from "../../src/watchdog/child-status.ts";
 import { MainWatchdogRuntime } from "../../src/watchdog/runtime.ts";
 import { events, createEventBus, makeAgent, makeAgentConfigs, makeMinimalCtx } from "../support/helpers.ts";
+import { removeDirSyncSafe } from "../support/safe-rm.ts";
 import {
   agentDir,
   available,
@@ -2219,7 +2220,7 @@ Answer only from the supplied synthetic text.
         [{ monitorKind: "command", state: "done", reportPath: "reports/async-host.log" }],
       );
       assert.match(fs.readFileSync(path.join(tempDir, "reports", "async-host.log"), "utf8"), /async host passed/);
-      fs.rmSync(result.details.asyncDir!, { recursive: true, force: true });
+      removeDirSyncSafe(result.details.asyncDir!);
       if (result.details.asyncId) fs.rmSync(path.join(DIRS.results, `${result.details.asyncId}.json`), { force: true });
 
       const failedScript = path.join(tempDir, "async-host-command-failed.cjs");
@@ -2272,7 +2273,7 @@ Answer only from the supplied synthetic text.
         fs.readFileSync(path.join(tempDir, "reports", "async-host-failed.log"), "utf8"),
         /async host failed/,
       );
-      fs.rmSync(failed.details.asyncDir!, { recursive: true, force: true });
+      removeDirSyncSafe(failed.details.asyncDir!);
       if (failed.details.asyncId) fs.rmSync(path.join(DIRS.results, `${failed.details.asyncId}.json`), { force: true });
     },
   );
@@ -2744,9 +2745,9 @@ Answer only from the supplied synthetic text.
         persistedResult.workflowReceipt?.receipt,
       );
       assert.equal(fs.existsSync(path.join(DIRS.results, `${toolCallId}.json`)), false);
-      fs.rmSync(result.details.asyncDir!, { recursive: true, force: true });
+      removeDirSyncSafe(result.details.asyncDir!);
       fs.rmSync(resultPath, { force: true });
-      fs.rmSync(childAsyncDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(childAsyncDir);
     },
   );
 
@@ -2808,7 +2809,7 @@ Answer only from the supplied synthetic text.
       };
       assert.equal(result.state, "complete");
       assert.deepEqual(result.workflow?.value, finalStatus.workflow?.value);
-      fs.rmSync(asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(asyncDir);
       fs.rmSync(resultPath, { force: true });
     },
   );
@@ -2904,7 +2905,7 @@ Answer only from the supplied synthetic text.
         );
       } finally {
         watcher.stopResultWatcher();
-        if (asyncDir) fs.rmSync(asyncDir, { recursive: true, force: true });
+        if (asyncDir) removeDirSyncSafe(asyncDir);
         if (resultPath) fs.rmSync(resultPath, { force: true });
       }
     },
@@ -2971,7 +2972,7 @@ Answer only from the supplied synthetic text.
       assert.equal(status.steps?.find((step) => step.workflowKey === "work")?.phase, "Review");
       assert.equal(mockPi.callCount(), 2);
 
-      fs.rmSync(result.details.asyncDir!, { recursive: true, force: true });
+      removeDirSyncSafe(result.details.asyncDir!);
       fs.rmSync(path.join(DIRS.results, `${result.details.asyncId}.json`), { force: true });
     },
   );
@@ -3028,7 +3029,7 @@ Answer only from the supplied synthetic text.
       assert.equal(await waitForFileContent(markerPath, "started"), "started");
       assert.equal(mockPi.callCount(), 0);
 
-      fs.rmSync(started.details.asyncDir!, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(started.details.asyncDir!);
       fs.rmSync(workflowResultPath, { force: true });
     },
   );
@@ -3123,7 +3124,7 @@ Answer only from the supplied synthetic text.
       }
       assert.equal(runResult.state, "complete");
 
-      fs.rmSync(result.details.asyncDir!, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(result.details.asyncDir!);
       fs.rmSync(resultPath, { force: true });
     },
   );
@@ -3180,7 +3181,7 @@ Answer only from the supplied synthetic text.
       }
       assert.equal(runResult.state, "complete");
 
-      fs.rmSync(result.details.asyncDir!, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(result.details.asyncDir!);
       fs.rmSync(resultPath, { force: true });
     },
   );
@@ -3356,7 +3357,7 @@ Answer only from the supplied synthetic text.
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
       assert.equal(fs.existsSync(activeMarkerPath), false);
-      fs.rmSync(asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(asyncDir);
       fs.rmSync(resultPath, { force: true });
     },
   );
@@ -3484,7 +3485,7 @@ Answer only from the supplied synthetic text.
         if (Date.now() > completionDeadline) assert.fail("Timed out waiting for async workflow completion");
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
-      fs.rmSync(asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(asyncDir);
       fs.rmSync(resultPath, { force: true });
     },
   );
@@ -3550,7 +3551,7 @@ Answer only from the supplied synthetic text.
         /workflow usageBudget does not support async runs\.run launches/,
       );
       assert.equal(mockPi.callCount(), 0);
-      fs.rmSync(started.details.asyncDir!, { recursive: true, force: true });
+      removeDirSyncSafe(started.details.asyncDir!);
       fs.rmSync(resultPath, { force: true });
     },
   );
@@ -3588,7 +3589,7 @@ Answer only from the supplied synthetic text.
           : [];
         assert.deepEqual(jsonFiles, [], `${localResultDir} retained result metadata: ${jsonFiles.join(", ")}`);
       }
-      fs.rmSync(childDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(childDir);
       fs.rmSync(path.join(DIRS.results, `${child.runId}.json`), { force: true });
     },
   );
@@ -3677,7 +3678,7 @@ Answer only from the supplied synthetic text.
         await terminal;
       } finally {
         unsubscribe();
-        fs.rmSync(childDir, { recursive: true, force: true });
+        removeDirSyncSafe(childDir);
         fs.rmSync(path.join(DIRS.results, `${runId}.json`), { force: true });
         removeResultIndex(DIRS.results, sessionId, runId, toolCallId);
       }
@@ -3759,7 +3760,7 @@ Answer only from the supplied synthetic text.
       } finally {
         vi.restoreAllMocks();
         syncBuiltinESMExports();
-        fs.rmSync(childDir, { recursive: true, force: true });
+        removeDirSyncSafe(childDir);
         fs.rmSync(path.join(DIRS.results, `${runId}.json`), { force: true });
       }
     },
@@ -3785,12 +3786,13 @@ Answer only from the supplied synthetic text.
       assert.ok(childRunId);
       const childDir = path.join(DIRS.async, childRunId);
       const childResultPath = path.join(DIRS.results, `${childRunId}.json`);
-      for (let attempt = 0; attempt < 200 && !fs.existsSync(childResultPath); attempt++) {
+      // 1000 x 20ms: generous settle budget for loaded CI runners (runner boot plus settle can take seconds).
+      for (let attempt = 0; attempt < 1000 && !fs.existsSync(childResultPath); attempt++) {
         await new Promise((resolve) => setTimeout(resolve, 20));
       }
       assert.equal(fs.existsSync(childResultPath), true);
       assert.equal(fs.existsSync(path.join(childDir, "workflow-result.json")), false);
-      fs.rmSync(childDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(childDir);
       fs.rmSync(childResultPath, { force: true });
     },
   );
@@ -3823,7 +3825,8 @@ Answer only from the supplied synthetic text.
       const childResultPath = path.join(DIRS.results, `${childRunId}.json`);
       let persisted: { timeoutMs?: number; state?: string; results?: Array<{ timedOut?: boolean; error?: string }> } =
         {};
-      for (let attempt = 0; attempt < 200; attempt++) {
+      // 1000 x 20ms: generous settle budget for loaded CI runners.
+      for (let attempt = 0; attempt < 1000; attempt++) {
         if (fs.existsSync(childResultPath)) persisted = JSON.parse(fs.readFileSync(childResultPath, "utf-8"));
         if (persisted.state === "failed") break;
         await new Promise((resolve) => setTimeout(resolve, 20));
@@ -3838,7 +3841,7 @@ Answer only from the supplied synthetic text.
         persisted.results?.map((entry) => entry.error),
         ["Subagent timed out after 150ms."],
       );
-      fs.rmSync(childDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(childDir);
       fs.rmSync(childResultPath, { force: true });
     },
   );
@@ -3911,7 +3914,8 @@ Answer only from the supplied synthetic text.
         steps?: Array<{ lane?: { key: string }; worktreePath?: string; branch?: string }>;
         parallelHandoff?: { path?: string; changedPatches?: number };
       } = {};
-      for (let attempt = 0; attempt < 200; attempt++) {
+      // 1000 x 20ms: generous settle budget for loaded CI runners.
+      for (let attempt = 0; attempt < 1000; attempt++) {
         if (fs.existsSync(childStatusPath)) childStatus = JSON.parse(fs.readFileSync(childStatusPath, "utf-8"));
         if (["complete", "failed", "stopped"].includes(childStatus.state ?? "")) break;
         await new Promise((resolve) => setTimeout(resolve, 20));
@@ -3960,7 +3964,8 @@ Answer only from the supplied synthetic text.
       );
       assert.equal(fs.existsSync(handoff.groups?.[0]?.cleanup?.tasks?.[0]?.path ?? ""), true);
       const childResultPath = path.join(DIRS.results, `${childRunId}.json`);
-      for (let attempt = 0; attempt < 200 && !fs.existsSync(childResultPath); attempt++) {
+      // 1000 x 20ms: generous settle budget for loaded CI runners.
+      for (let attempt = 0; attempt < 1000 && !fs.existsSync(childResultPath); attempt++) {
         await new Promise((resolve) => setTimeout(resolve, 20));
       }
       const childResult = JSON.parse(fs.readFileSync(childResultPath, "utf-8")) as {
@@ -3989,9 +3994,9 @@ Answer only from the supplied synthetic text.
       assert.equal(resumeTarget.recoveryDescriptor?.sourceRunId, childRunId);
       assert.equal(path.resolve(resumeTarget.cwd ?? ""), path.resolve(retainedCwd));
       discardPreservedWorktrees(childStatus.parallelHandoff!.path!, { kind: "confirmed" });
-      fs.rmSync(started.details.asyncDir!, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(started.details.asyncDir!);
       fs.rmSync(workflowResultPath, { force: true });
-      fs.rmSync(childDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(childDir);
       fs.rmSync(path.join(DIRS.results, `${childRunId}.json`), { force: true });
     },
   );
@@ -4097,7 +4102,7 @@ Answer only from the supplied synthetic text.
       assert.equal(status.steps?.[0]?.stopped, true);
       assert.equal(status.steps?.[0]?.error, "Workflow stopped.");
 
-      fs.rmSync(started.details.asyncDir!, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(started.details.asyncDir!);
       fs.rmSync(path.join(DIRS.results, `${workflowRunId}.json`), { force: true });
     },
   );
@@ -4190,7 +4195,7 @@ Answer only from the supplied synthetic text.
         (event) => event.type === "subagent.child-status" && event.childId === "slow" && event.status === "stopped",
       );
       assert.equal(stoppedChildStatus?.reason, "subagent-action");
-      fs.rmSync(started.details.asyncDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 20 });
+      removeDirSyncSafe(started.details.asyncDir);
       fs.rmSync(resultPath, { force: true });
     },
   );
@@ -4245,7 +4250,7 @@ Answer only from the supplied synthetic text.
       assert.equal(result.isError, true);
       assert.match(result.content[0]?.text ?? "", /No running or queued async run was found/);
       assert.doesNotMatch(result.content[0]?.text ?? "", /reload recovery/);
-      fs.rmSync(asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(asyncDir);
     },
   );
 
@@ -4767,7 +4772,7 @@ Answer only from the supplied synthetic text.
       assert.match(fs.readFileSync(workflowOutput, "utf-8"), new RegExp(escapeRegExp(expectedMapping)));
       assert.equal(fs.readFileSync(savedReport, "utf-8"), "review report");
 
-      fs.rmSync(started.details.asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(started.details.asyncDir);
       fs.rmSync(resultPath, { force: true });
     },
   );
@@ -5129,8 +5134,8 @@ Answer only from the supplied synthetic text.
         );
         assert.ok(inheritedOutputPaths.every((outputPath) => pathContainsSegments(outputPath, "artifacts", "outputs")));
       } finally {
-        fs.rmSync(retainedAsyncDir, { recursive: true, force: true });
-        fs.rmSync(runFanoutBudget.directory, { recursive: true, force: true });
+        removeDirSyncSafe(retainedAsyncDir);
+        removeDirSyncSafe(runFanoutBudget.directory);
       }
     },
   );
@@ -6280,7 +6285,7 @@ Answer only from the supplied synthetic text.
       assert.equal(handoff.groups[0]?.cleanup.tasks[0]?.branchRemoved, true);
       assert.equal(fs.existsSync(handoff.groups[0]?.cleanup.tasks[0]?.path ?? ""), false);
       assert.equal(fs.existsSync(activeMarkerPath), false);
-      fs.rmSync(started.details.asyncDir, { recursive: true, force: true });
+      removeDirSyncSafe(started.details.asyncDir);
       fs.rmSync(resultPath, { force: true });
     },
   );
