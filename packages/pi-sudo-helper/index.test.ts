@@ -213,7 +213,11 @@ interface PasswordInputLike {
 type DoneFn = (value: boolean) => void;
 type CustomFactory = (tui: unknown, theme: unknown, keybindings: unknown, done: DoneFn) => unknown;
 
-describe("sudo-helper 密码输入超时", () => {
+/**
+ * 弹窗测试夹具：mock ui.custom 捕获组件工厂、mock exec 让预检返回「需要密码」。
+ * 供「密码输入超时」与「命令详情显示」两个 describe 共用。
+ */
+function makeDialogHarness() {
   let factoryRef: CustomFactory | undefined;
   const customMock = vi.fn((factory: CustomFactory) => {
     factoryRef = factory;
@@ -230,36 +234,44 @@ describe("sudo-helper 密码输入超时", () => {
     killed: false,
   }));
 
-  beforeEach(() => {
-    vi.useFakeTimers();
-    factoryRef = undefined;
-    execMock.mockClear();
-    customMock.mockClear();
-  });
+  return {
+    customMock,
+    /** 重置夹具状态并启用 fake timers（afterEach 里 useRealTimers 由 describe 负责） */
+    reset() {
+      vi.useFakeTimers();
+      factoryRef = undefined;
+      execMock.mockClear();
+      customMock.mockClear();
+    },
+    /** 触发 sudo tool_call，驱动到密码弹窗弹出，返回 handler Promise 与组件实例 */
+    async callSudoWithDialog(command: string) {
+      const { pi, callHandler } = registerHandlers();
+      (pi as unknown as { exec: unknown }).exec = execMock;
+      const input: Record<string, unknown> = { command };
+      const ctx = createMockCtx({
+        hasUI: true,
+        ui: { custom: customMock as unknown as ExtensionUIContext["custom"] },
+      });
+      const pending = callHandler({ type: "tool_call", toolName: "bash", toolCallId: "c1", input }, ctx);
+      // 等 handler 走完预检/FIFO 准备、弹出密码框（fake timers 下用微任务推进）
+      for (let i = 0; i < 50 && !factoryRef; i++) await vi.advanceTimersByTimeAsync(1);
+      expect(factoryRef).toBeDefined();
+      const resolveRef = (customMock as unknown as { resolveRef?: DoneFn }).resolveRef!;
+      const comp = factoryRef!(undefined, undefined, undefined, resolveRef) as PasswordInputLike;
+      return { pending, comp, input };
+    },
+  };
+}
+
+describe("sudo-helper 密码输入超时", () => {
+  const h = makeDialogHarness();
+  beforeEach(() => h.reset());
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  /** 触发 sudo tool_call，驱动到密码弹窗弹出，返回 handler Promise 与组件实例 */
-  async function callSudoWithDialog(command: string) {
-    const { pi, callHandler } = registerHandlers();
-    (pi as unknown as { exec: unknown }).exec = execMock;
-    const input: Record<string, unknown> = { command };
-    const ctx = createMockCtx({
-      hasUI: true,
-      ui: { custom: customMock as unknown as ExtensionUIContext["custom"] },
-    });
-    const pending = callHandler({ type: "tool_call", toolName: "bash", toolCallId: "c1", input }, ctx);
-    // 等 handler 走完预检/FIFO 准备、弹出密码框（fake timers 下用微任务推进）
-    for (let i = 0; i < 50 && !factoryRef; i++) await vi.advanceTimersByTimeAsync(1);
-    expect(factoryRef).toBeDefined();
-    const resolveRef = (customMock as unknown as { resolveRef?: DoneFn }).resolveRef!;
-    const comp = factoryRef!(undefined, undefined, undefined, resolveRef) as PasswordInputLike;
-    return { pending, comp, input };
-  }
-
   it("120s 无输入 → 超时自动取消：block + 超时 reason，命令不改写", async () => {
-    const { pending, comp, input } = await callSudoWithDialog("sudo systemctl restart nginx");
+    const { pending, comp, input } = await h.callSudoWithDialog("sudo systemctl restart nginx");
     expect(comp.timedOut).toBe(false);
 
     await vi.advanceTimersByTimeAsync(120_000);
@@ -272,7 +284,7 @@ describe("sudo-helper 密码输入超时", () => {
   });
 
   it("超时前提交 → 命令改写为 SUDO_ASKPASS sudo -A，后续时间推进无副作用", async () => {
-    const { pending, comp, input } = await callSudoWithDialog("sudo systemctl restart nginx");
+    const { pending, comp, input } = await h.callSudoWithDialog("sudo systemctl restart nginx");
     comp.handleInput("p");
     comp.handleInput("w");
     comp.handleInput("\r"); // Enter 提交
@@ -289,7 +301,7 @@ describe("sudo-helper 密码输入超时", () => {
   });
 
   it("Esc 主动取消 → reason 是用户取消而非超时", async () => {
-    const { pending, comp } = await callSudoWithDialog("sudo apt update");
+    const { pending, comp } = await h.callSudoWithDialog("sudo apt update");
     comp.handleInput("\x1b"); // Escape
     const result = (await pending) as { block: boolean; reason: string } | undefined;
 
@@ -300,9 +312,159 @@ describe("sudo-helper 密码输入超时", () => {
   });
 
   it("提示行标注超时行为", async () => {
-    const { comp } = await callSudoWithDialog("sudo apt update");
+    const { comp } = await h.callSudoWithDialog("sudo apt update");
     const rendered = comp.render(40).join("\n");
     expect(rendered).toContain("120s");
     expect(rendered).toContain("超时");
+  });
+});
+
+// ============================================================================
+// 命令详情显示：输入行上方展示 sudo 命令（收起态 3 行 / Tab 展开 / 键盘滚动）
+// ============================================================================
+
+describe("sudo-helper 命令详情显示", () => {
+  const h = makeDialogHarness();
+  beforeEach(() => h.reset());
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const LINE_UP = "\x1b[A";
+  const LINE_DOWN = "\x1b[B";
+  const PAGE_UP = "\x1b[5~";
+  const PAGE_DOWN = "\x1b[6~";
+  const WHEEL_UP = "\x1b[<64;10;5M";
+  const WHEEL_DOWN = "\x1b[<65;10;5M";
+
+  /** 判断 pending 是否仍 unresolved（弹窗未关闭 = 滚动键被组件消化，未影响宿主路径） */
+  async function expectStillOpen(pending: Promise<unknown>) {
+    let settled = false;
+    pending.then(() => (settled = true)).catch(() => (settled = true));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(settled).toBe(false);
+  }
+
+  function manyLines(n: number): string {
+    return Array.from({ length: n }, (_, i) => `sudo c${i + 1}`).join("\n");
+  }
+
+  it("短命令：原样显示在输入行上方，无展开提示", async () => {
+    const { comp } = await h.callSudoWithDialog("sudo apt update");
+    const lines = comp.render(40);
+    const joined = lines.join("\n");
+    expect(joined).toContain("$ sudo apt update");
+    expect(joined).not.toContain("…");
+    expect(joined).not.toContain("Tab");
+    const cmdIdx = lines.findIndex((l) => l.includes("$ sudo apt update"));
+    const inputIdx = lines.findIndex((l) => l.includes(">"));
+    expect(cmdIdx).toBeGreaterThan(-1);
+    expect(cmdIdx).toBeLessThan(inputIdx);
+  });
+
+  it("多逻辑行：收起态只显示前 3 行 + 还有 N 行提示", async () => {
+    const { comp } = await h.callSudoWithDialog("sudo a1\nsudo a2\nsudo a3\nsudo a4\nsudo a5");
+    const joined = comp.render(40).join("\n");
+    expect(joined).toContain("$ sudo a1");
+    expect(joined).toContain("$ sudo a2");
+    expect(joined).toContain("$ sudo a3");
+    expect(joined).not.toContain("$ sudo a4");
+    expect(joined).toContain("还有 2 行");
+    expect(joined).toContain("Tab 展开全部");
+  });
+
+  it("单行超长：行内截断加省略号，可展开", async () => {
+    const { comp } = await h.callSudoWithDialog(`sudo ${"x".repeat(60)}`);
+    const joined = comp.render(40).join("\n");
+    expect(joined).toContain("…");
+    expect(joined).toContain("Tab 展开全部");
+  });
+
+  it("Tab 展开：显示完整命令；再 Tab 收起", async () => {
+    const { comp } = await h.callSudoWithDialog("sudo a1\nsudo a2\nsudo a3\nsudo a4\nsudo a5");
+    comp.handleInput("\t"); // 展开
+    const expanded = comp.render(40).join("\n");
+    expect(expanded).toContain("$ sudo a4");
+    expect(expanded).toContain("$ sudo a5");
+    expect(expanded).toContain("Tab 收起");
+    expect(expanded).not.toContain("还有");
+
+    comp.handleInput("\t"); // 收起
+    const collapsed = comp.render(40).join("\n");
+    expect(collapsed).not.toContain("$ sudo a4");
+    expect(collapsed).toContain("还有 2 行");
+  });
+
+  it("展开态超视口：1-10/15 位置指示，↑↓ 滚动，PgUp/PgDn 翻页，边界钳制", async () => {
+    const { comp } = await h.callSudoWithDialog(manyLines(15));
+    comp.handleInput("\t");
+    let joined = comp.render(40).join("\n");
+    expect(joined).toContain("1-10/15");
+    expect(joined).toContain("$ sudo c1");
+    expect(joined).not.toContain("$ sudo c15");
+
+    comp.handleInput(LINE_DOWN); // ↓ 滚 1 行
+    joined = comp.render(40).join("\n");
+    expect(joined).toContain("2-11/15");
+    expect(joined).toContain("$ sudo c11");
+
+    comp.handleInput(PAGE_DOWN); // PgDn：offset 1+10 → 钳到底部 5
+    joined = comp.render(40).join("\n");
+    expect(joined).toContain("6-15/15");
+    expect(joined).toContain("$ sudo c15");
+
+    comp.handleInput(LINE_DOWN); // 底部再 ↓ 不动
+    expect(comp.render(40).join("\n")).toContain("6-15/15");
+
+    comp.handleInput(PAGE_UP); // PgUp 翻回顶部
+    expect(comp.render(40).join("\n")).toContain("1-10/15");
+
+    comp.handleInput(LINE_UP); // 顶部再 ↑ 不动
+    expect(comp.render(40).join("\n")).toContain("1-10/15");
+  });
+
+  it("展开态内容不超视口：无滚动指示", async () => {
+    const { comp } = await h.callSudoWithDialog("sudo a1\nsudo a2\nsudo a3");
+    comp.handleInput("\t");
+    const joined = comp.render(40).join("\n");
+    expect(joined).toContain("$ sudo a3");
+    expect(joined).not.toContain("↑↓");
+  });
+
+  it("滚轮序列防御解析：展开态滚动，收起态忽略", async () => {
+    const { comp } = await h.callSudoWithDialog(manyLines(15));
+    comp.handleInput(WHEEL_DOWN); // 收起态：忽略，仍收起
+    expect(comp.render(40).join("\n")).toContain("还有 12 行");
+
+    comp.handleInput("\t");
+    comp.handleInput(WHEEL_DOWN);
+    expect(comp.render(40).join("\n")).toContain("2-11/15");
+    comp.handleInput(WHEEL_UP);
+    expect(comp.render(40).join("\n")).toContain("1-10/15");
+  });
+
+  it("收起→展开→收起：滚动偏移复位", async () => {
+    const { comp } = await h.callSudoWithDialog(manyLines(15));
+    comp.handleInput("\t");
+    comp.handleInput(LINE_DOWN);
+    comp.handleInput(LINE_DOWN);
+    expect(comp.render(40).join("\n")).toContain("3-12/15");
+    comp.handleInput("\t"); // 收起
+    comp.handleInput("\t"); // 再展开 → 从头开始
+    expect(comp.render(40).join("\n")).toContain("1-10/15");
+  });
+
+  it("滚动键被组件完整消化：不提交、不取消、弹窗保持打开", async () => {
+    const { pending, comp } = await h.callSudoWithDialog(manyLines(15));
+    comp.handleInput("\t");
+    for (const key of [LINE_UP, LINE_DOWN, PAGE_UP, PAGE_DOWN, WHEEL_UP, WHEEL_DOWN]) {
+      comp.handleInput(key);
+    }
+    await expectStillOpen(pending);
+    expect(comp.timedOut).toBe(false);
+    // 弹窗仍可正常交互：Esc 取消生效
+    comp.handleInput("\x1b");
+    const result = (await pending) as { block: boolean } | undefined;
+    expect(result?.block).toBe(true);
   });
 });

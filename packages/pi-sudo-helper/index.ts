@@ -16,7 +16,9 @@
  * 2. sudo -n true 预检：sudo timestamp 有效则跳过
  * 3. 创建 FIFO + askpass 脚本（/dev/shm，权限 0600 / 0700）
  * 4. 启动 cat 进程（阻塞在 FIFO open，等待 reader）
- * 5. 弹出遮罩密码框，用户输入密码（XOR 加密存储于 SecureBuffer）
+ * 5. 弹出遮罩密码框，输入行上方展示待执行的 sudo 命令详情（收起态 3 行、
+ *    超宽行截断加 …；Tab 展开/收起，↑↓·PgUp·PgDn 滚动查看完整命令），
+ *    用户输入密码（XOR 加密存储于 SecureBuffer）
  * 6. 提交时：解密 → 写入 cat stdin → 立即清零明文 Buffer
  * 7. 修改命令：仅第一个 sudo → SUDO_ASKPASS=<script> sudo -A
  * 8. bash 工具执行：sudo -A 调用 askpass → cat FIFO → 密码通过管道传递
@@ -34,7 +36,14 @@ import { spawn } from "node:child_process";
 import { randomFillSync, randomUUID } from "node:crypto";
 import { chmod, unlink, writeFile } from "node:fs/promises";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { type Component, type Focusable, matchesKey } from "@earendil-works/pi-tui";
+import {
+  type Component,
+  type Focusable,
+  matchesKey,
+  truncateToWidth,
+  visibleWidth,
+  wrapTextWithAnsi,
+} from "@earendil-works/pi-tui";
 import { classifySudoUsage, findAllCommandSudo } from "./bash-scan.ts";
 
 /** 临时文件存活上限（兜底清理） */
@@ -45,6 +54,15 @@ const SUDO_PRECHECK_TIMEOUT_MS = 5000;
 
 /** 密码输入超时：无输入到达上限自动取消弹窗，避免 tool_call 长期阻塞 */
 const PASSWORD_INPUT_TIMEOUT_MS = 120_000;
+
+/** 收起态最多显示的命令逻辑行数 */
+const MAX_COLLAPSED_LINES = 3;
+
+/** 展开态滚动视口最大行数 */
+const MAX_EXPANDED_VIEWPORT = 10;
+
+/** 命令单行显示的最大字符数（超出截断加省略号） */
+const MAX_LINE_CHARS = 120;
 
 interface SudoResources {
   fifoPath: string;
@@ -143,7 +161,7 @@ export default function (pi: ExtensionAPI) {
     try {
       submitted = await ctx.ui.custom<boolean>(
         (_tui, _theme, _keybindings, done) => {
-          input = new PasswordInputComponent("sudo 密码", writer.stdin, done);
+          input = new PasswordInputComponent("sudo 密码", command, writer.stdin, done);
           return input;
         },
         { overlay: true },
@@ -413,12 +431,17 @@ class PasswordInputComponent implements Component, Focusable {
   private secure = new SecureBuffer();
   private _focused = false;
   private done = false;
+  /** 命令详情是否展开（Tab 切换） */
+  private expanded = false;
+  /** 展开态滚动偏移（显示行序号，0 起；收起时复位） */
+  private scrollOffset = 0;
 
   /** 超时自动取消置位（与用户主动 Esc 取消区分提示语） */
   timedOut = false;
 
   constructor(
     private readonly title: string,
+    private readonly command: string,
     private readonly writeTarget: { write(data: Buffer | string): boolean },
     private readonly resolve: (submitted: boolean) => void,
   ) {}
@@ -459,6 +482,44 @@ class PasswordInputComponent implements Component, Focusable {
       return;
     }
 
+    // Tab：展开 / 收起命令详情（复位滚动偏移）
+    if (matchesKey(data, "tab")) {
+      this.expanded = !this.expanded;
+      this.scrollOffset = 0;
+      return;
+    }
+
+    // 命令详情展开态的滚动键：↑↓ 滚 1 行、PgUp/PgDn 翻页、滚轮防御解析
+    // （宿主 pi 不启用终端鼠标上报模式，滚轮序列实际到不了；到达时顺带处理，
+    //   其余转义序列仍走下方忽略分支。弹窗 overlay 聚焦期间输入只进本组件，
+    //   关闭时由宿主 hideOverlay 自动还原焦点，无全局副作用）
+    if (this.expanded) {
+      const maxOffset = Math.max(0, this.displayLines().length - MAX_EXPANDED_VIEWPORT);
+      if (matchesKey(data, "up")) {
+        this.scrollOffset = Math.max(0, this.scrollOffset - 1);
+        return;
+      }
+      if (matchesKey(data, "down")) {
+        this.scrollOffset = Math.min(maxOffset, this.scrollOffset + 1);
+        return;
+      }
+      if (matchesKey(data, "pageUp")) {
+        this.scrollOffset = Math.max(0, this.scrollOffset - MAX_EXPANDED_VIEWPORT);
+        return;
+      }
+      if (matchesKey(data, "pageDown")) {
+        this.scrollOffset = Math.min(maxOffset, this.scrollOffset + MAX_EXPANDED_VIEWPORT);
+        return;
+      }
+      // SGR 滚轮：64=上滚 65=下滚（每次 1 行）
+      const wheel = data.match(/^\x1b\[<(64|65);\d+;\d+[Mm]$/);
+      if (wheel) {
+        this.scrollOffset =
+          wheel[1] === "64" ? Math.max(0, this.scrollOffset - 1) : Math.min(maxOffset, this.scrollOffset + 1);
+        return;
+      }
+    }
+
     // 忽略所有其他转义序列（箭头键、功能键、鼠标等）
     if (data.startsWith("\x1b")) return;
 
@@ -472,6 +533,23 @@ class PasswordInputComponent implements Component, Focusable {
         this.secure.append(char);
       }
     }
+  }
+
+  /** 展开态完整显示行：逻辑行按固定预算（MAX_LINE_CHARS-2 列）换行，续行缩进 2 列对齐 "$ " 前缀 */
+  private displayLines(): string[] {
+    const lines: string[] = [];
+    const wrapBudget = Math.max(1, MAX_LINE_CHARS - 2);
+    for (const raw of this.command.split("\n")) {
+      const segs = wrapTextWithAnsi(raw, wrapBudget);
+      if (segs.length === 0) {
+        lines.push("$ ");
+        continue;
+      }
+      for (let i = 0; i < segs.length; i++) {
+        lines.push(i === 0 ? `$ ${segs[i]}` : `  ${segs[i]}`);
+      }
+    }
+    return lines;
   }
 
   render(width: number): string[] {
@@ -494,8 +572,45 @@ class PasswordInputComponent implements Component, Focusable {
     const titlePadAfter = innerWidth - titleText.length - titlePadBefore;
     const titleLine = `${REVERSE}${RED_BOLD}${" ".repeat(Math.max(0, titlePadBefore))}${titleText}${" ".repeat(Math.max(0, titlePadAfter))}${RESET}`;
 
-    // 提示行
-    const hintText = ` Enter 提交 · Esc 取消 · ${PASSWORD_INPUT_TIMEOUT_MS / 1000}s 无输入超时自动取消 `;
+    // ---- 命令详情块（输入行上方）----
+    // 收起态：每个逻辑行按预算截断（min(宽度-前缀, MAX_LINE_CHARS)，超宽加 …），最多 3 个逻辑行；
+    // 展开态：固定预算换行的完整命令 + 滚动视口（↑↓/PgUp/PgDn，位置指示）
+    const logicalLines = this.command.split("\n");
+    const contentBudget = Math.min(Math.max(1, innerWidth - 3), MAX_LINE_CHARS); // "$ " 前缀 + 1 列边距
+    const collapsed: string[] = [];
+    let anyTruncated = false;
+    for (const raw of logicalLines.slice(0, MAX_COLLAPSED_LINES)) {
+      if (visibleWidth(raw) > contentBudget) anyTruncated = true;
+      collapsed.push(`$ ${truncateToWidth(raw, contentBudget, "…")}`);
+    }
+    const hiddenLogical = Math.max(0, logicalLines.length - MAX_COLLAPSED_LINES);
+    const expandable = anyTruncated || hiddenLogical > 0;
+
+    const cmdBlock: string[] = [];
+    if (this.expanded) {
+      const display = this.displayLines();
+      const maxOffset = Math.max(0, display.length - MAX_EXPANDED_VIEWPORT);
+      this.scrollOffset = Math.min(this.scrollOffset, maxOffset); // 宽度/内容变化后钳制
+      const scrollable = display.length > MAX_EXPANDED_VIEWPORT;
+      cmdBlock.push(
+        scrollable
+          ? `${DIM} 以 root 执行（${this.scrollOffset + 1}-${Math.min(display.length, this.scrollOffset + MAX_EXPANDED_VIEWPORT)}/${display.length} 行，↑↓ 滚动）:${RESET}`
+          : `${DIM} 以 root 执行:${RESET}`,
+      );
+      for (const l of display.slice(this.scrollOffset, this.scrollOffset + MAX_EXPANDED_VIEWPORT)) {
+        cmdBlock.push(`${CYAN}${l}${RESET}`);
+      }
+    } else {
+      cmdBlock.push(`${DIM} 以 root 执行:${RESET}`);
+      for (const l of collapsed) cmdBlock.push(`${CYAN}${l}${RESET}`);
+      if (hiddenLogical > 0) {
+        cmdBlock.push(`${DIM} ⏷ 还有 ${hiddenLogical} 行 · Tab 展开全部${RESET}`);
+      }
+    }
+
+    // 提示行：可展开 / 已展开时追加 Tab 提示
+    const tabHint = this.expanded ? " · Tab 收起" : expandable ? " · Tab 展开全部" : "";
+    const hintText = ` Enter 提交 · Esc 取消 · ${PASSWORD_INPUT_TIMEOUT_MS / 1000}s 无输入超时自动取消${tabHint} `;
     const hintPad = Math.floor((innerWidth - hintText.length) / 2);
     const hintLine = `${DIM}${" ".repeat(Math.max(0, hintPad))}${hintText}${RESET}`;
 
@@ -508,7 +623,7 @@ class PasswordInputComponent implements Component, Focusable {
     const inputPadding = " ".repeat(Math.max(0, innerWidth - inputVisualWidth));
     const inputLine = `${INPUT_BG}${CYAN}>${RESET}${INPUT_BG} ${masked}${cursor}${INPUT_BG}${inputPadding}${RESET}`;
 
-    return [borderLine, titleLine, hintLine, borderLine, inputLine, borderLine];
+    return [borderLine, titleLine, hintLine, borderLine, ...cmdBlock, inputLine, borderLine];
   }
 
   dispose(): void {

@@ -27,6 +27,19 @@ Restart your Pi session.
    `sudo bash -c '…'` wrapping arbitrary inner commands
 6. Temp resources are cleaned up when the tool call finishes
 
+### Command details
+
+The dialog shows the exact command about to run as root **above the password input**, so
+you always know what you are authorizing. Collapsed by default to at most 3 logical lines
+(over-long lines truncated with `…`, plus a `⏷ 还有 N 行` footer). `Tab` expands the full
+command with keyboard scrolling — `↑`/`↓` one line, `PgUp`/`PgDn` a page, position shown
+as `x–y/z 行`; `Tab` again collapses. Mouse-wheel SGR sequences are handled defensively
+(the host does not enable terminal mouse reporting, so wheel events normally never arrive).
+
+Scroll keys never leak to the underlying session: while the overlay dialog is focused, pi
+delivers all input exclusively to it, and focus is restored automatically on close — no
+global hooks, nothing to undo.
+
 ### Input timeout
 
 The password dialog cancels itself automatically after **120 seconds** without input, so a
